@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@theme {
+  --color-stone-950: #0c0a09;
+  --color-stone-900: #1c1917;
+  --color-stone-800: #292524;
+  --color-stone-700: #44403c;
+  --color-stone-400: #a8a29e;
+  --color-stone-300: #d6d3d1;
+  --color-amber-500: #f59e0b;
+  --color-amber-400: #fbbf24;
+  --color-amber-300: #fcd34d;
+  --color-red-500: #ef4444;
+  --color-red-400: #f87171;
+  --color-green-500: #22c55e;
+  --color-green-400: #4ade80;
+  --color-moria-bg: #0a0908;
+  --color-moria-panel: #1a1510;
+  --color-moria-border: #3d3528;
+  --color-moria-text: #c4b89a;
+  --color-moria-highlight: #d4a843;
+  --color-moria-danger: #c0392b;
+  --color-moria-success: #27ae60;
+  --color-moria-info: #7f8c8d;
+  --font-fantasy: 'Georgia', 'Times New Roman', serif;
+  --font-mono: 'Courier New', 'Consolas', monospace;
+}
+
+body {
+  background-color: var(--color-moria-bg);
+  color: var(--color-moria-text);
+  font-family: var(--font-fantasy);
+  margin: 0;
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-moria-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-moria-border);
+  border-radius: 3px;
+}
