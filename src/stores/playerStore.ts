@@ -7,6 +7,7 @@ import { items as itemDb } from '../data/items'
 import { createPlayer } from '../data/player-classes'
 import { rollDice } from '../engine/dice'
 import type { GameLogEntry } from '../types/command'
+import { playSound } from '../engine/audio'
 
 export const usePlayerStore = defineStore('player', () => {
   const player = ref<Player | null>(null)
@@ -14,7 +15,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   const isAlive = computed(() => player.value !== null && player.value.hp > 0)
 
-  function initPlayer(name: string, playerClass: PlayerClass) {
+  function initPlayer(name: string, playerClass: PlayerClass, extraPotions = 0) {
     player.value = createPlayer(name, playerClass)
     inventory.value = []
 
@@ -28,6 +29,19 @@ export const usePlayerStore = defineStore('player', () => {
     for (const itemId of startingItems[playerClass]) {
       const item = itemDb[itemId]
       if (item) inventory.value.push({ ...item })
+    }
+
+    // Extra potions from difficulty
+    if (extraPotions > 0) {
+      for (let i = 0; i < extraPotions; i++) {
+        const potion = itemDb['healing-potion']
+        if (potion) addItem(potion)
+      }
+    } else if (extraPotions < 0) {
+      // Remove potions on hard difficulty
+      for (let i = 0; i < Math.abs(extraPotions); i++) {
+        removeItem('healing-potion')
+      }
     }
   }
 
@@ -78,7 +92,7 @@ export const usePlayerStore = defineStore('player', () => {
     return logs
   }
 
-  function useItem(itemId: string): GameLogEntry[] {
+  function useItem(itemId: string, healingMultiplier = 1.0): GameLogEntry[] {
     if (!player.value) return []
     const logs: GameLogEntry[] = []
     const item = inventory.value.find(i => i.id === itemId)
@@ -89,8 +103,9 @@ export const usePlayerStore = defineStore('player', () => {
 
     if (item.type === 'potion' && item.healing) {
       const heal = rollDice(item.healing)
+      const scaledHeal = Math.max(1, Math.floor(heal.total * healingMultiplier))
       const oldHp = player.value.hp
-      player.value.hp = Math.min(player.value.maxHp, player.value.hp + heal.total)
+      player.value.hp = Math.min(player.value.maxHp, player.value.hp + scaledHeal)
       const healed = player.value.hp - oldHp
       logs.push({ text: `You drink the ${item.name} and recover ${healed} HP. (${player.value.hp}/${player.value.maxHp})`, type: 'info', timestamp: Date.now() })
       removeItem(itemId)
@@ -106,6 +121,7 @@ export const usePlayerStore = defineStore('player', () => {
     player.value.xp += amount
     if (player.value.xp >= player.value.xpToNext) {
       player.value.level++
+      playSound('levelup')
       player.value.xp -= player.value.xpToNext
       player.value.xpToNext = Math.floor(player.value.xpToNext * 1.5)
       const hpGain = Math.max(1, rollDice('1d8+0').total + getModifier(player.value.abilities.con))

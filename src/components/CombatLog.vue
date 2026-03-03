@@ -5,9 +5,23 @@ import { useGameStore } from '../stores/gameStore'
 const gameStore = useGameStore()
 const logEl = ref<HTMLDivElement>()
 
-const log = computed(() => gameStore.gameLog)
+type LogFilter = 'all' | 'combat' | 'loot' | 'narrative'
+const activeFilter = ref<LogFilter>('all')
 
-watch(() => log.value.length, async () => {
+const filterMap: Record<LogFilter, string[]> = {
+  all: [],
+  combat: ['combat', 'system', 'error'],
+  loot: ['loot', 'info'],
+  narrative: ['narrative'],
+}
+
+const filteredLog = computed(() => {
+  if (activeFilter.value === 'all') return gameStore.gameLog
+  const types = filterMap[activeFilter.value]
+  return gameStore.gameLog.filter(e => types.includes(e.type))
+})
+
+watch(() => gameStore.gameLog.length, async () => {
   await nextTick()
   if (logEl.value) {
     logEl.value.scrollTop = logEl.value.scrollHeight
@@ -22,15 +36,38 @@ const typeColor: Record<string, string> = {
   loot: 'text-green-400',
   info: 'text-moria-info',
 }
+
+const filters: { id: LogFilter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'combat', label: 'Combat' },
+  { id: 'loot', label: 'Loot' },
+  { id: 'narrative', label: 'Story' },
+]
 </script>
 
 <template>
-  <div ref="logEl" class="flex-1 overflow-y-auto p-3 border border-moria-border rounded bg-moria-bg/80 font-mono text-xs leading-relaxed space-y-0.5">
-    <div v-for="(entry, i) in log" :key="i" :class="typeColor[entry.type] || 'text-moria-text'">
-      {{ entry.text }}
+  <div class="flex flex-col flex-1 min-h-0">
+    <!-- Filter buttons -->
+    <div class="flex gap-1 mb-1">
+      <button
+        v-for="f in filters"
+        :key="f.id"
+        @click="activeFilter = f.id"
+        class="px-2 py-0.5 text-xs rounded transition-colors cursor-pointer"
+        :class="activeFilter === f.id
+          ? 'bg-moria-highlight/20 text-moria-highlight border border-moria-highlight/50'
+          : 'text-moria-info border border-moria-border hover:border-moria-info'"
+      >{{ f.label }}</button>
     </div>
-    <div v-if="log.length === 0" class="text-moria-border italic">
-      The darkness awaits...
+
+    <!-- Log entries -->
+    <div ref="logEl" class="flex-1 overflow-y-auto p-3 border border-moria-border rounded bg-moria-bg/80 font-mono text-xs leading-relaxed space-y-0.5">
+      <div v-for="(entry, i) in filteredLog" :key="i" :class="typeColor[entry.type] || 'text-moria-text'">
+        {{ entry.text }}
+      </div>
+      <div v-if="filteredLog.length === 0" class="text-moria-border italic">
+        {{ activeFilter === 'all' ? 'The darkness awaits...' : 'No entries for this filter.' }}
+      </div>
     </div>
   </div>
 </template>

@@ -44,3 +44,34 @@ body {
   background: var(--color-moria-border);
   border-radius: 3px;
 }
+
+/* Screen effects */
+@keyframes screen-shake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-3px, 2px); }
+  40% { transform: translate(3px, -2px); }
+  60% { transform: translate(-2px, -1px); }
+  80% { transform: translate(2px, 1px); }
+}
+
+@keyframes screen-flash-red {
+  0% { box-shadow: inset 0 0 60px rgba(192, 57, 43, 0.6); }
+  100% { box-shadow: inset 0 0 0 transparent; }
+}
+
+@keyframes screen-flash-gold {
+  0% { box-shadow: inset 0 0 60px rgba(212, 168, 67, 0.5); }
+  100% { box-shadow: inset 0 0 0 transparent; }
+}
+
+.screen-shake {
+  animation: screen-shake 0.4s ease-out;
+}
+
+.screen-flash-red {
+  animation: screen-flash-red 0.5s ease-out;
+}
+
+.screen-flash-gold {
+  animation: screen-flash-gold 0.6s ease-out;
+}

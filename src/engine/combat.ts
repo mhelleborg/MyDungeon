@@ -61,8 +61,12 @@ export function playerAttack(player: Player, enemy: CombatEnemy, weaponDamage: s
   return result
 }
 
-export function enemyAttack(enemy: CombatEnemy, player: Player): AttackResult {
-  const roll = rollD20()
+export function enemyAttack(enemy: CombatEnemy, player: Player, advantage = false): AttackResult {
+  let roll = rollD20()
+  if (advantage) {
+    const roll2 = rollD20()
+    roll = Math.max(roll, roll2)
+  }
   const totalAttack = roll + enemy.attackBonus
   const critical = roll === 20
   const hit = critical || totalAttack >= player.ac

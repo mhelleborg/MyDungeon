@@ -1,12 +1,21 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import { useCombatStore } from '../stores/combatStore'
+import { useTypewriter } from '../composables/useTypewriter'
 
 const gameStore = useGameStore()
 const combatStore = useCombatStore()
 
 const room = computed(() => gameStore.currentRoom)
+const { displayText, isTyping, start, skip } = useTypewriter(3, 20)
+
+// Type out description when room changes
+watch(() => gameStore.currentRoomId, () => {
+  if (room.value) {
+    start(room.value.description)
+  }
+}, { immediate: true })
 
 function move(direction: string) {
   gameStore.handleCommand(direction)
@@ -21,7 +30,9 @@ function examine(name: string) {
   <div class="flex-1 p-4 overflow-y-auto border border-moria-border rounded bg-moria-panel/50">
     <template v-if="room">
       <h2 class="text-xl font-bold text-moria-highlight mb-2">{{ room.name }}</h2>
-      <p class="text-moria-text leading-relaxed mb-3">{{ room.description }}</p>
+      <p class="text-moria-text leading-relaxed mb-3 cursor-pointer" @click="skip">
+        {{ displayText }}<span v-if="isTyping" class="animate-pulse">|</span>
+      </p>
       <p class="text-moria-info text-sm">
         Exits: <span v-for="(exit, i) in room.exits" :key="exit.direction">
           <button

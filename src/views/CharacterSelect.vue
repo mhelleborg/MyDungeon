@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { PlayerClass } from '../types/character'
+import type { DifficultyLevel } from '../types/difficulty'
+import { difficultySettings } from '../types/difficulty'
 import { useGameStore } from '../stores/gameStore'
 import { usePlayerStore } from '../stores/playerStore'
 
@@ -9,6 +11,13 @@ const playerStore = usePlayerStore()
 
 const name = ref('')
 const selectedClass = ref<PlayerClass>('ranger')
+const selectedDifficulty = ref<DifficultyLevel>('normal')
+
+const difficulties = [
+  { id: 'easy' as DifficultyLevel, label: 'Easy', desc: 'Weaker enemies, more loot, bonus healing. For those who want to enjoy the story.' },
+  { id: 'normal' as DifficultyLevel, label: 'Normal', desc: 'Standard challenge. A fair fight through the Mines of Moria.' },
+  { id: 'hard' as DifficultyLevel, label: 'Hard', desc: 'Tougher enemies, scarcer supplies, harder skill checks. For seasoned adventurers.' },
+]
 
 const classes = [
   {
@@ -36,7 +45,9 @@ const classes = [
 
 function startAdventure() {
   const playerName = name.value.trim() || 'Adventurer'
-  playerStore.initPlayer(playerName, selectedClass.value)
+  gameStore.difficulty = selectedDifficulty.value
+  const multipliers = difficultySettings[selectedDifficulty.value]
+  playerStore.initPlayer(playerName, selectedClass.value, multipliers.extraPotions)
   gameStore.phase = 'playing'
   gameStore.initGame()
 }
@@ -77,6 +88,25 @@ function startAdventure() {
           <p class="text-moria-text text-sm mb-1">{{ cls.desc }}</p>
           <p class="text-moria-info text-xs font-mono">{{ cls.stats }}</p>
         </button>
+      </div>
+
+      <!-- Difficulty selection -->
+      <div class="mb-8">
+        <label class="text-moria-info text-xs block mb-2">DIFFICULTY</label>
+        <div class="flex gap-2">
+          <button
+            v-for="diff in difficulties"
+            :key="diff.id"
+            @click="selectedDifficulty = diff.id"
+            class="flex-1 p-3 border rounded transition-colors cursor-pointer text-center"
+            :class="selectedDifficulty === diff.id
+              ? 'border-moria-highlight bg-moria-highlight/10'
+              : 'border-moria-border bg-moria-panel/30 hover:border-moria-border/80'"
+          >
+            <span class="text-moria-highlight font-bold text-sm">{{ diff.label }}</span>
+            <p class="text-moria-info text-xs mt-1">{{ diff.desc }}</p>
+          </button>
+        </div>
       </div>
 
       <button

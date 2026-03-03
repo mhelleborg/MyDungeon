@@ -61,6 +61,44 @@ export function parseCommand(input: string): ParsedCommand {
     return { type: 'equip', target: rest, raw }
   }
 
+  // Disarm
+  if (verb === 'disarm') {
+    return { type: 'disarm', target: rest || undefined, raw }
+  }
+
+  // Flee
+  if (verb === 'flee' || verb === 'run' || verb === 'escape') {
+    return { type: 'flee', raw }
+  }
+
+  // Sneak
+  if (verb === 'sneak' || verb === 'stealth') {
+    const dir = DIRECTION_ALIASES[rest]
+    if (dir) return { type: 'sneak', target: dir, raw }
+    return { type: 'sneak', target: rest || undefined, raw }
+  }
+
+  // Rest
+  if (verb === 'rest' || verb === 'sleep' || verb === 'camp') {
+    return { type: 'rest', raw }
+  }
+
+  // NPC interaction
+  if (verb === 'talk' || verb === 'speak') {
+    return { type: 'talk', target: rest || undefined, raw }
+  }
+  if (verb === 'trade' || verb === 'buy' || verb === 'shop') {
+    return { type: 'trade', target: rest || undefined, raw }
+  }
+
+  // Puzzles
+  if (verb === 'say' || verb === 'answer') {
+    return { type: 'say', target: rest, raw }
+  }
+  if (verb === 'solve' || verb === 'pull') {
+    return { type: 'solve', target: rest || undefined, raw }
+  }
+
   // Info commands
   const infoCommands: Record<string, CommandType> = {
     inventory: 'inventory', inv: 'inventory', i: 'inventory', bag: 'inventory',

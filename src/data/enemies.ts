@@ -82,7 +82,7 @@ export const enemies: Record<string, Enemy> = {
     attackBonus: 5,
     damage: '1d10+3',
     xpReward: 100,
-    lootTable: ['gold-coins', 'chain-mail'],
+    lootTable: ['gold-coins', 'chain-mail', 'healing-potion'],
   },
 
   'cave-troll': {
@@ -131,9 +131,9 @@ export const enemies: Record<string, Enemy> = {
     id: 'balrog',
     name: 'Durin\'s Bane',
     description: 'Durin\'s Bane — a Balrog of Morgoth, servant of the first Dark Lord. It is ancient beyond reckoning, wreathed in shadow and flame. The very air scorches and the bridge groans beneath its terrible weight. "You cannot pass!"',
-    hp: 150,
-    maxHp: 150,
-    ac: 19,
+    hp: 100,
+    maxHp: 100,
+    ac: 17,
     abilities: {
       str: 26,
       dex: 14,
@@ -143,7 +143,7 @@ export const enemies: Record<string, Enemy> = {
       cha: 20,
     },
     attackBonus: 10,
-    damage: '2d12+6',
+    damage: '2d10+4',
     xpReward: 1000,
     lootTable: ['mithril-coat'],
   },

@@ -114,7 +114,8 @@ export const items: Record<string, Item> = {
     id: 'torch',
     name: 'Torch',
     description: 'A pitch-soaked torch that lights dark rooms, casting flickering shadows on ancient stone walls.',
-    type: 'quest',
+    type: 'misc',
+    consumable: true,
     value: 1,
   },
   'balin-tome': {
@@ -126,6 +127,13 @@ export const items: Record<string, Item> = {
   },
 
   // --- Misc ---
+  'watcher-pearl': {
+    id: 'watcher-pearl',
+    name: 'Watcher\'s Pearl',
+    description: 'A luminous pearl pried from the depths of the Watcher\'s pool. It pulses with a cold, deep-sea light.',
+    type: 'misc',
+    value: 50,
+  },
   'gold-coins': {
     id: 'gold-coins',
     name: 'Gold Coins',
