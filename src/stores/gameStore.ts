@@ -22,6 +22,7 @@ import { difficultySettings } from '../types/difficulty'
 import { playSound } from '../engine/audio'
 import type { Companion } from '../types/companion'
 import { checkRecruitment, rollCompanionComment } from '../engine/handlers/companionHandler'
+import { saveGame, loadGame, deleteSave } from '../engine/saveLoad'
 import { usePlayerStore } from './playerStore'
 import { useCombatStore } from './combatStore'
 import { useStatsStore } from './statsStore'
@@ -238,6 +239,7 @@ export const useGameStore = defineStore('game', () => {
       log('You emerge from the darkness into blinding sunlight. The Mines of Moria lie behind you.', 'narrative')
       log('You have survived the crossing of Moria!', 'system')
       useStatsStore().checkEndOfRun()
+      deleteSave()
       phase.value = 'victory'
     }
   }
@@ -277,6 +279,8 @@ export const useGameStore = defineStore('game', () => {
       case 'inventory': handleInventory(); break
       case 'stats':   handleStats(); break
       case 'help':    handleHelp(); break
+      case 'save':    handleSave(); break
+      case 'load':    handleLoad(); break
       case 'map':     log('Check the minimap on the right side of your screen.', 'info'); break
       case 'unknown': {
         // Check for boss fight special commands
@@ -297,7 +301,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     // Tick light (skip info-only commands)
-    if (!['help', 'stats', 'inventory', 'map'].includes(cmd.type)) {
+    if (!['help', 'stats', 'inventory', 'map', 'save', 'load'].includes(cmd.type)) {
       const result = tickLightPure({
         hasLight: hasLight.value,
         turnsRemaining: lightTurnsRemaining.value,
@@ -1039,6 +1043,23 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  // ── Save / Load ──────────────────────────────────────────
+  function handleSave() {
+    if (saveGame()) {
+      log('Game saved.', 'system')
+    } else {
+      log('Failed to save game.', 'error')
+    }
+  }
+
+  function handleLoad() {
+    if (loadGame()) {
+      log('Game loaded.', 'system')
+    } else {
+      log('No save file found or save is corrupted.', 'error')
+    }
+  }
+
   // ── Info commands ──────────────────────────────────────────
   function handleInventory() {
     const playerStore = usePlayerStore()
@@ -1089,6 +1110,8 @@ export const useGameStore = defineStore('game', () => {
     log('Arrow keys - Move (when not in combat)', 'info')
     log('L - Look, I - Inventory, H - Help', 'info')
     log('A - Attack (combat), F - Flee (combat)', 'info')
+    log('save - Save your progress', 'info')
+    log('load - Load saved progress', 'info')
     log('/ - Focus command input', 'info')
   }
 
@@ -1113,6 +1136,8 @@ export const useGameStore = defineStore('game', () => {
     solvedPuzzles,
     revealedExits,
     difficulty,
+    roomLookCounts,
+    recruitableNPCsOffered,
     getDifficultyMultipliers,
     initGame,
     handleCommand,

@@ -110,6 +110,14 @@ export function parseCommand(input: string): ParsedCommand {
     return { type: 'destroy', target: rest || undefined, raw }
   }
 
+  // Save/Load
+  if (verb === 'save') {
+    return { type: 'save', raw }
+  }
+  if (verb === 'load') {
+    return { type: 'load', raw }
+  }
+
   // Info commands
   const infoCommands: Record<string, CommandType> = {
     inventory: 'inventory', inv: 'inventory', i: 'inventory', bag: 'inventory',

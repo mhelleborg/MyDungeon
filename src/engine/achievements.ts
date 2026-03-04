@@ -92,18 +92,15 @@ export const achievements: Record<string, Achievement> = {
 const TOTAL_PUZZLES = 5 // speak-friend, forge-levers, gargoyle-riddle, stair-descent, records-ward
 
 /**
- * Pure function: check which achievements a completed run earns.
- * Does NOT touch localStorage — the store handles persistence.
+ * Mid-run achievements: only checks achievements based on positive progress
+ * (things the player has done), not "zero" conditions that would trigger at
+ * game start.
  */
-export function checkAchievements(stats: RunStats, foundItems: string[]): string[] {
+export function checkMidRunAchievements(stats: RunStats, foundItems: string[]): string[] {
   const earned: string[] = []
 
   if (stats.sneakSuccesses >= 3) {
     earned.push('shadow-of-the-past')
-  }
-
-  if (stats.potionsUsed === 0) {
-    earned.push('iron-constitution')
   }
 
   if (stats.balrogSlain && stats.playerClass === 'wizard') {
@@ -118,6 +115,24 @@ export function checkAchievements(stats: RunStats, foundItems: string[]): string
     earned.push('lord-of-moria')
   }
 
+  if (stats.puzzlesSolved >= TOTAL_PUZZLES) {
+    earned.push('puzzle-master')
+  }
+
+  return earned
+}
+
+/**
+ * End-of-run achievements: checks all achievements including ones that
+ * require completing the game (iron-constitution, speed-runner, etc.).
+ */
+export function checkEndOfRunAchievements(stats: RunStats, foundItems: string[]): string[] {
+  const earned = checkMidRunAchievements(stats, foundItems)
+
+  if (stats.potionsUsed === 0) {
+    earned.push('iron-constitution')
+  }
+
   const elapsed = Date.now() - stats.startTime
   if (elapsed < 10 * 60 * 1000) {
     earned.push('speed-runner')
@@ -129,10 +144,6 @@ export function checkAchievements(stats: RunStats, foundItems: string[]): string
 
   if (stats.difficulty === 'hard') {
     earned.push('hard-mode')
-  }
-
-  if (stats.puzzlesSolved >= TOTAL_PUZZLES) {
-    earned.push('puzzle-master')
   }
 
   // Pacifist: 3 or fewer non-Balrog kills. Balrog must be slain to win, so

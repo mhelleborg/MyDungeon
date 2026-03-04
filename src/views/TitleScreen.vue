@@ -1,7 +1,27 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useGameStore } from '../stores/gameStore'
+import { hasSaveGame, loadGame, getSaveTimestamp } from '../engine/saveLoad'
 
 const gameStore = useGameStore()
+const showContinue = ref(false)
+const saveTimestamp = ref<string | null>(null)
+
+onMounted(() => {
+  showContinue.value = hasSaveGame()
+  if (showContinue.value) {
+    const ts = getSaveTimestamp()
+    if (ts) {
+      saveTimestamp.value = new Date(ts).toLocaleString()
+    }
+  }
+})
+
+function continueGame() {
+  if (loadGame()) {
+    gameStore.phase = 'playing'
+  }
+}
 
 function startGame() {
   gameStore.phase = 'character-select'
@@ -34,14 +54,29 @@ function startGame() {
         </pre>
       </div>
 
-      <button
-        @click="startGame"
-        class="px-8 py-3 bg-moria-border text-moria-highlight font-bold text-lg rounded
-               hover:bg-moria-highlight hover:text-moria-bg transition-colors cursor-pointer
-               tracking-wider"
-      >
-        ENTER MORIA
-      </button>
+      <div class="flex flex-col items-center gap-3">
+        <button
+          v-if="showContinue"
+          @click="continueGame"
+          class="px-8 py-3 bg-moria-highlight text-moria-bg font-bold text-lg rounded
+                 hover:bg-moria-highlight/80 transition-colors cursor-pointer
+                 tracking-wider"
+        >
+          CONTINUE
+        </button>
+        <div v-if="showContinue && saveTimestamp" class="text-moria-border text-xs -mt-1 mb-1">
+          Saved: {{ saveTimestamp }}
+        </div>
+
+        <button
+          @click="startGame"
+          class="px-8 py-3 bg-moria-border text-moria-highlight font-bold text-lg rounded
+                 hover:bg-moria-highlight hover:text-moria-bg transition-colors cursor-pointer
+                 tracking-wider"
+        >
+          ENTER MORIA
+        </button>
+      </div>
 
       <div class="mt-6 text-moria-border text-xs">
         A text adventure using simplified D&D rules

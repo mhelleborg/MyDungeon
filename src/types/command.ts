@@ -22,6 +22,8 @@ export type CommandType =
   | 'stats'
   | 'help'
   | 'map'
+  | 'save'
+  | 'load'
   | 'unknown'
 
 export interface ParsedCommand {

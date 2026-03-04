@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import type { PlayerClass } from '../types/character'
 import type { DifficultyLevel } from '../types/difficulty'
 import type { RunStats } from '../engine/achievements'
-import { checkAchievements, achievements } from '../engine/achievements'
+import { checkMidRunAchievements as checkMidRun, checkEndOfRunAchievements, achievements } from '../engine/achievements'
 
 const ACHIEVEMENTS_KEY = 'moria-achievements'
 
@@ -94,8 +94,8 @@ export const useStatsStore = defineStore('stats', () => {
     toastQueue.value = toastQueue.value.filter(t => t.id !== id)
   }
 
-  function checkMidRunAchievements() {
-    const stats: RunStats = {
+  function buildRunStats(): RunStats {
+    return {
       roomsExplored: roomsExplored.value,
       totalRooms: totalRooms.value,
       enemiesKilled: enemiesKilled.value,
@@ -112,15 +112,15 @@ export const useStatsStore = defineStore('stats', () => {
       difficulty: difficulty.value,
       balrogSlain: balrogSlain.value,
     }
+  }
 
-    const earned = checkAchievements(stats, foundItems.value)
+  function unlockEarned(earned: string[]) {
     for (const id of earned) {
       if (!unlockedAchievements.value.has(id)) {
         unlockedAchievements.value.add(id)
         const ach = achievements[id]
         if (ach) {
           toastQueue.value.push({ id: ach.id, name: ach.name, description: ach.description, icon: ach.icon })
-          // Auto-dismiss after 5s
           setTimeout(() => dismissToast(ach.id), 5000)
         }
       }
@@ -128,33 +128,16 @@ export const useStatsStore = defineStore('stats', () => {
     saveAchievements()
   }
 
+  function checkMidRunAchievements() {
+    unlockEarned(checkMidRun(buildRunStats(), foundItems.value))
+  }
+
   // ── End-of-run achievement check ─────────────────────────
   function checkEndOfRun(): string[] {
-    const stats: RunStats = {
-      roomsExplored: roomsExplored.value,
-      totalRooms: totalRooms.value,
-      enemiesKilled: enemiesKilled.value,
-      damageDealt: damageDealt.value,
-      damageTaken: damageTaken.value,
-      itemsFound: itemsFound.value,
-      potionsUsed: potionsUsed.value,
-      puzzlesSolved: puzzlesSolved.value,
-      secretsFound: secretsFound.value,
-      sneakSuccesses: sneakSuccesses.value,
-      fleeAttempts: fleeAttempts.value,
-      startTime: startTime.value,
-      playerClass: playerClass.value,
-      difficulty: difficulty.value,
-      balrogSlain: balrogSlain.value,
-    }
-
-    const earned = checkAchievements(stats, foundItems.value)
+    const earned = checkEndOfRunAchievements(buildRunStats(), foundItems.value)
     const fresh = earned.filter(id => !unlockedAchievements.value.has(id))
 
-    for (const id of earned) {
-      unlockedAchievements.value.add(id)
-    }
-    saveAchievements()
+    unlockEarned(earned)
 
     newlyUnlocked.value = fresh
     return fresh
