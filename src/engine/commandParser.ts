@@ -33,7 +33,8 @@ export function parseCommand(input: string): ParsedCommand {
 
   // Look / examine
   if (verb === 'look' || verb === 'l') {
-    return { type: rest ? 'examine' : 'look', target: rest || undefined, raw }
+    if (!rest || rest === 'around' || rest === 'room') return { type: 'look', raw }
+    return { type: 'examine', target: rest, raw }
   }
   if (verb === 'examine' || verb === 'inspect' || verb === 'check') {
     return { type: 'examine', target: rest, raw }

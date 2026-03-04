@@ -29,6 +29,8 @@ export interface Room {
   name: string
   description: string
   clearedDescription?: string
+  /** Extra details revealed by looking around carefully. Shown one at a time on repeated looks. */
+  lookDetails?: string[]
   exits: Exit[]
   enemies?: RoomEnemy[]
   items?: string[]  // item IDs

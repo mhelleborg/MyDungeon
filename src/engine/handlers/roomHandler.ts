@@ -10,9 +10,19 @@ export function getVisibleExits(room: Room, revealedExits: ReadonlySet<string>):
     .map(e => e.direction)
 }
 
+/** Fallback observations when a room has no (more) hidden details to reveal. */
+const LOOK_FALLBACKS: string[] = [
+  'You scan the area once more, but nothing new catches your eye. The shadows keep their secrets.',
+  'You peer into every corner. The silence of the mountain presses in around you.',
+  'Your eyes trace the ancient stonework, but you find nothing you haven\'t already noticed.',
+  'You look again. The darkness beyond your light seems to shift, but it is only your imagination.',
+  'The cold air stirs faintly. You see nothing new, but the feeling of being watched persists.',
+  'You study your surroundings with care. The dwarves built to last — every stone is where it should be.',
+  'A drip of water echoes somewhere far off. Otherwise, nothing has changed here.',
+]
+
 /**
- * Pure function: build the logs for displaying a room.
- * Handles darkness, cleared state, exits (filtering hidden), and ground items.
+ * Pure function: build the logs for entering a room (with header).
  */
 export function describeRoom(
   room: Room,
@@ -44,7 +54,12 @@ export function describeRoom(
 }
 
 /**
- * Same as describeRoom but without the header — used by `look`.
+ * Pure function: build the logs for "look" / "look around".
+ * On first look, shows description + first hidden detail.
+ * On subsequent looks, reveals the next unseen detail.
+ * When all details exhausted (or none exist), shows a contextual fallback.
+ *
+ * Returns logs and the new lookCount to store.
  */
 export function describeLook(
   room: Room,
@@ -52,16 +67,37 @@ export function describeLook(
   isCleared: boolean,
   groundItemNames: string[],
   revealedExits: ReadonlySet<string> = new Set(),
-): HandlerResult {
+  lookCount: number = 0,
+): HandlerResult & { newLookCount: number } {
   const logs: HandlerResult['logs'] = []
 
   if (isDark) {
     logs.push(entry('The darkness is absolute. You can see nothing without a light source.', 'narrative'))
-    return { logs }
+    return { logs, newLookCount: lookCount }
   }
 
-  const desc = (isCleared && room.clearedDescription) ? room.clearedDescription : room.description
-  logs.push(entry(desc, 'narrative'))
+  const details = room.lookDetails ?? []
+
+  if (lookCount === 0) {
+    // First look: show full description
+    const desc = (isCleared && room.clearedDescription) ? room.clearedDescription : room.description
+    logs.push(entry(desc, 'narrative'))
+
+    // Also reveal first hidden detail if available
+    if (details.length > 0) {
+      logs.push(entry(details[0]!, 'narrative'))
+    }
+  } else {
+    // Subsequent looks: reveal next detail or show fallback
+    if (lookCount < details.length) {
+      logs.push(entry('You look more carefully...', 'narrative'))
+      logs.push(entry(details[lookCount]!, 'narrative'))
+    } else {
+      // All details seen (or none exist) — random fallback
+      const fallback = LOOK_FALLBACKS[Math.floor(Math.random() * LOOK_FALLBACKS.length)]!
+      logs.push(entry(fallback, 'narrative'))
+    }
+  }
 
   const exits = getVisibleExits(room, revealedExits).join(', ')
   logs.push(entry(`Exits: ${exits}`, 'info'))
@@ -70,5 +106,5 @@ export function describeLook(
     logs.push(entry(`You see: ${groundItemNames.join(', ')}`, 'info'))
   }
 
-  return { logs }
+  return { logs, newLookCount: lookCount + 1 }
 }
