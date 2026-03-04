@@ -20,6 +20,8 @@ import { puzzles, roomPuzzles } from '../data/puzzles'
 import type { DifficultyLevel } from '../types/difficulty'
 import { difficultySettings } from '../types/difficulty'
 import { playSound } from '../engine/audio'
+import type { Companion } from '../types/companion'
+import { checkRecruitment, rollCompanionComment } from '../engine/handlers/companionHandler'
 import { usePlayerStore } from './playerStore'
 import { useCombatStore } from './combatStore'
 import { useStatsStore } from './statsStore'
@@ -46,6 +48,9 @@ export const useGameStore = defineStore('game', () => {
   const revealedExits = ref<Set<string>>(new Set())
   const destroyedTraps = ref<Set<string>>(new Set())
   const searchedInteractions = ref<Set<string>>(new Set())
+  const roomLookCounts = ref<Record<string, number>>({})
+  const companions = ref<Companion[]>([])
+  const recruitableNPCsOffered = ref<Set<string>>(new Set())
 
   const currentRoom = computed(() => getRoom(currentRoomId.value))
 
@@ -111,6 +116,9 @@ export const useGameStore = defineStore('game', () => {
     revealedExits.value = new Set()
     destroyedTraps.value = new Set()
     searchedInteractions.value = new Set()
+    roomLookCounts.value = {}
+    companions.value = []
+    recruitableNPCsOffered.value = new Set()
     applyLightState({ hasLight: false, turnsRemaining: 0, permanent: false })
 
     roomItems.value = {}
@@ -188,6 +196,14 @@ export const useGameStore = defineStore('game', () => {
             log(`${npc.name} is here.`, 'info')
           }
         }
+      }
+    }
+
+    // Companion comments
+    for (const comp of companions.value) {
+      if (comp.hp > 0) {
+        const comment = rollCompanionComment(comp, roomId)
+        if (comment) log(comment, 'narrative')
       }
     }
 
@@ -324,8 +340,10 @@ export const useGameStore = defineStore('game', () => {
   function handleLook() {
     const room = currentRoom.value
     if (!room) return
-    const result = describeLook(room, isDark(), clearedRooms.value.has(currentRoomId.value), groundItemNames(currentRoomId.value), revealedExits.value)
+    const count = roomLookCounts.value[currentRoomId.value] ?? 0
+    const result = describeLook(room, isDark(), clearedRooms.value.has(currentRoomId.value), groundItemNames(currentRoomId.value), revealedExits.value, count)
     pushLogs(result.logs)
+    roomLookCounts.value[currentRoomId.value] = result.newLookCount
   }
 
   // ── Examine ────────────────────────────────────────────────
@@ -819,6 +837,28 @@ export const useGameStore = defineStore('game', () => {
     if (!npc) { log('There is no one here to talk to.', 'error'); return }
 
     const playerStore = usePlayerStore()
+
+    // Check if this NPC has already offered to join and player is talking again to accept
+    if (npc.recruitableCompanionId && recruitableNPCsOffered.value.has(npc.id)) {
+      const check = checkRecruitment(npc.recruitableCompanionId, interactedNPCs.value)
+      if (check.canRecruit && check.companion) {
+        // Already in party?
+        if (companions.value.some(c => c.id === check.companion!.id)) {
+          log(`${npc.name} is already travelling with you.`, 'info')
+          return
+        }
+        companions.value.push(check.companion)
+        // Remove NPC from room so they don't appear as static anymore
+        const npcList = roomNPCs[currentRoomId.value]
+        if (npcList) {
+          const idx = npcList.indexOf(npc.id)
+          if (idx !== -1) npcList.splice(idx, 1)
+        }
+        log(`${npc.name} joins your company! "Let us face this darkness together."`, 'loot')
+        return
+      }
+    }
+
     const result = talkToNPC(npc, isDark(), interactedNPCs.value.has(npc.id))
     pushLogs(result.logs)
 
@@ -827,6 +867,15 @@ export const useGameStore = defineStore('game', () => {
       if (item && playerStore.player) {
         pushLogs(playerStore.addItem(item))
         interactedNPCs.value.add(npc.id)
+      }
+    }
+
+    // After quest reward given (interacted), offer recruitment if applicable
+    if (npc.recruitableCompanionId && interactedNPCs.value.has(npc.id) && !recruitableNPCsOffered.value.has(npc.id)) {
+      if (!companions.value.some(c => c.id === npc.recruitableCompanionId)) {
+        recruitableNPCsOffered.value.add(npc.id)
+        log(`${npc.name} looks at you steadily. "Will you have me at your side? These mines are no place to wander alone."`, 'info')
+        log('(Talk to them again to accept.)', 'system')
       }
     }
   }
@@ -1075,5 +1124,6 @@ export const useGameStore = defineStore('game', () => {
     markRoomCleared,
     checkDeath,
     groundItemNames,
+    companions,
   }
 })

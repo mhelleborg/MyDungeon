@@ -4,9 +4,11 @@ import type { CombatEnemy } from '../types/character'
 import type { GameLogEntry } from '../types/command'
 import { enemies as enemyDb } from '../data/enemies'
 import type { RoomEnemy } from '../types/room'
+import { rollD20, rollDice } from '../engine/dice'
 import { playerAttack, enemyAttack, castSpell, tickCooldowns } from '../engine/combat'
 import { rollLoot } from '../engine/loot'
 import { checkPhaseTransition, rollFireDamage, resolveBreakBridge, type BossPhase } from '../engine/handlers/bossHandler'
+import { companionAttack, companionTakeDamage } from '../engine/handlers/companionHandler'
 import { playSound } from '../engine/audio'
 import { usePlayerStore } from './playerStore'
 import { useGameStore } from './gameStore'
@@ -64,6 +66,14 @@ export const useCombatStore = defineStore('combat', () => {
       const names = combatEnemies.value.map(e => e.name).join(', ')
       logs.push({ text: `Enemies appear: ${names}!`, type: 'combat', timestamp: Date.now() })
     }
+    // Companion readiness
+    const gameStore2 = useGameStore()
+    for (const comp of gameStore2.companions) {
+      if (comp.hp > 0) {
+        logs.push({ text: `${comp.name} readies their weapon at your side!`, type: 'combat', timestamp: Date.now() })
+      }
+    }
+
     logs.push({ text: 'Roll for initiative! Type "attack" or "cast <spell>" to fight.', type: 'system', timestamp: Date.now() })
     return logs
   }
@@ -160,6 +170,14 @@ export const useCombatStore = defineStore('combat', () => {
       return logs
     }
 
+    // Companion turns
+    logs.push(...doCompanionTurns())
+    if (livingEnemies.value.length === 0) {
+      logs.push({ text: 'All enemies defeated! The way is clear.', type: 'combat', timestamp: Date.now() })
+      endCombat()
+      return logs
+    }
+
     // Boss phase transitions
     processBossPhase(logs)
     if (!playerStore.isAlive) return logs
@@ -211,6 +229,14 @@ export const useCombatStore = defineStore('combat', () => {
       return logs
     }
 
+    // Companion turns
+    logs.push(...doCompanionTurns())
+    if (livingEnemies.value.length === 0) {
+      logs.push({ text: 'All enemies defeated!', type: 'combat', timestamp: Date.now() })
+      endCombat()
+      return logs
+    }
+
     // Boss phase transitions
     processBossPhase(logs)
     if (!playerStore.isAlive) return logs
@@ -222,16 +248,77 @@ export const useCombatStore = defineStore('combat', () => {
     return logs
   }
 
+  function doCompanionTurns(): GameLogEntry[] {
+    const gameStore = useGameStore()
+    const logs: GameLogEntry[] = []
+    const statsStore = useStatsStore()
+    const playerStore = usePlayerStore()
+
+    for (const comp of gameStore.companions) {
+      if (comp.hp <= 0) continue
+      const target = livingEnemies.value[Math.floor(Math.random() * livingEnemies.value.length)]
+      if (!target) break
+
+      const result = companionAttack(comp, target)
+      logs.push(...result.logs)
+
+      if (result.targetDead) {
+        statsStore.recordEnemyKilled()
+        if (target.id === 'balrog') statsStore.recordBalrogSlain()
+        const xpLogs = playerStore.addXp(target.xpReward)
+        logs.push(...xpLogs)
+
+        if (target.lootTable) {
+          const loot = rollLoot(target.lootTable)
+          for (const item of loot) {
+            if (!gameStore.roomItems[gameStore.currentRoomId]) {
+              gameStore.roomItems[gameStore.currentRoomId] = []
+            }
+            gameStore.roomItems[gameStore.currentRoomId]!.push(item.id)
+            logs.push({ text: `${target.name} dropped ${item.name}.`, type: 'loot', timestamp: Date.now() })
+          }
+        }
+      }
+    }
+    return logs
+  }
+
   function doEnemyTurns(): GameLogEntry[] {
     const playerStore = usePlayerStore()
     if (!playerStore.player) return []
 
     const gameStore = useGameStore()
     const dmgMult = gameStore.getDifficultyMultipliers().enemyDamage
+    const livingCompanions = gameStore.companions.filter(c => c.hp > 0)
 
     const statsStore = useStatsStore()
     const logs: GameLogEntry[] = []
     for (const enemy of livingEnemies.value) {
+      // ~30% chance to target a companion if any alive
+      if (livingCompanions.length > 0 && Math.random() < 0.3) {
+        const target = livingCompanions[Math.floor(Math.random() * livingCompanions.length)]!
+        const roll = rollD20()
+        const total = roll + enemy.attackBonus
+        const hit = roll === 20 || total >= target.ac
+
+        if (hit) {
+          const dmg = rollDice(enemy.damage)
+          let damage = dmg.total + (roll === 20 ? dmg.total : 0)
+          damage = Math.max(1, damage)
+          if (dmgMult !== 1.0) damage = Math.max(1, Math.floor(damage * dmgMult))
+
+          const dmgResult = companionTakeDamage(target, damage)
+          logs.push(...dmgResult.logs)
+          if (dmgResult.dead) {
+            const idx = livingCompanions.indexOf(target)
+            if (idx !== -1) livingCompanions.splice(idx, 1)
+          }
+        } else {
+          logs.push({ text: `${enemy.name} attacks ${target.name} but misses.`, type: 'combat', timestamp: Date.now() })
+        }
+        continue
+      }
+
       const result = enemyAttack(enemy, playerStore.player, darkCombat.value)
 
       // Apply difficulty scaling to damage

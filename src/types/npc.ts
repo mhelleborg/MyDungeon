@@ -17,4 +17,6 @@ export interface NPC {
   detectableInDark?: boolean
   /** If true, full interaction requires light */
   requiresLight?: boolean
+  /** If set, this NPC can be recruited as a companion after quest completion */
+  recruitableCompanionId?: string
 }

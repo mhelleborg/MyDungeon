@@ -34,6 +34,7 @@ export const npcs: Record<string, NPC> = {
     },
     detectableInDark: true,
     requiresLight: true,
+    recruitableCompanionId: 'trapped-elf',
   },
 
   'old-bombur': {
@@ -67,6 +68,7 @@ export const npcs: Record<string, NPC> = {
       itemId: 'miruvor',
       message: 'Halbarad uncorks a crystal flask and hands it to you. "Miruvor — the cordial of Imladris. Drink when hope seems lost."',
     },
+    recruitableCompanionId: 'shadow-ranger',
   },
 
   'ghost-of-ori': {
