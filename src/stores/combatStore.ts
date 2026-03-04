@@ -42,6 +42,7 @@ export const useCombatStore = defineStore('combat', () => {
         const scaledHp = Math.max(1, Math.floor(template.maxHp * multipliers.enemyHp))
         combatEnemies.value.push({
           ...template,
+          name: re.count > 1 ? `${template.name} ${i + 1}` : template.name,
           hp: scaledHp,
           maxHp: scaledHp,
           instanceId: `${re.enemyId}-${i}`,

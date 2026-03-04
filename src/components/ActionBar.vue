@@ -12,16 +12,38 @@ const combatStore = useCombatStore()
 const player = computed(() => playerStore.player)
 const inCombat = computed(() => combatStore.inCombat)
 
+interface ActionItem {
+  id: string
+  name: string
+  type: string
+  count: number
+  quantity?: number
+}
+
+function dedup(items: { id: string; name: string; type: string; quantity?: number }[]): ActionItem[] {
+  const map = new Map<string, ActionItem>()
+  for (const item of items) {
+    const existing = map.get(item.id)
+    if (existing) {
+      existing.count++
+    } else {
+      map.set(item.id, { ...item, count: 1 })
+    }
+  }
+  return Array.from(map.values())
+}
+
 // Ground items in current room
 const groundItems = computed(() => {
   const ids = gameStore.roomItems[gameStore.currentRoomId] || []
-  return ids.map(id => itemDb[id]).filter((item): item is NonNullable<typeof item> => !!item)
+  const items = ids.map(id => itemDb[id]).filter((item): item is NonNullable<typeof item> => !!item)
+  return dedup(items)
 })
 
 // Inventory items with context-appropriate actions
 const usableItems = computed(() => {
   if (!player.value) return []
-  return playerStore.inventory.filter(item => {
+  const items = playerStore.inventory.filter(item => {
     if (inCombat.value) {
       // Only potions during combat
       return item.type === 'potion'
@@ -32,6 +54,7 @@ const usableItems = computed(() => {
     if (item.type === 'armor' && item.id !== player.value!.equippedArmor) return true
     return false
   })
+  return dedup(items)
 })
 
 // Spells (combat only)
@@ -90,7 +113,7 @@ function itemActionLabel(item: { id: string; name: string; type: string }) {
         :key="item.id"
         @click="cmd(`use ${item.name}`)"
         class="px-2 py-1 text-xs rounded border border-amber-500/60 bg-amber-500/15 text-amber-400 hover:bg-amber-500/30 cursor-pointer transition-colors"
-      >Use {{ item.name }}<span v-if="item.quantity && item.quantity > 1" class="opacity-60 ml-1">x{{ item.quantity }}</span></button>
+      >Use {{ item.name }}<span v-if="item.count > 1" class="opacity-60 ml-1">x{{ item.count }}</span></button>
     </template>
 
     <!-- Exploration Mode -->
@@ -101,7 +124,7 @@ function itemActionLabel(item: { id: string; name: string; type: string }) {
         :key="item.id"
         @click="cmd(`take ${item.name}`)"
         class="px-2 py-1 text-xs rounded border border-amber-500/60 bg-amber-500/15 text-amber-400 hover:bg-amber-500/30 cursor-pointer transition-colors"
-      >Take {{ item.name }}</button>
+      >Take {{ item.name }}<span v-if="item.count > 1" class="opacity-60 ml-1">x{{ item.count }}</span></button>
 
       <!-- Usable/equippable inventory items -->
       <button
@@ -109,7 +132,7 @@ function itemActionLabel(item: { id: string; name: string; type: string }) {
         :key="item.id"
         @click="cmd(itemAction(item))"
         class="px-2 py-1 text-xs rounded border border-moria-info/60 bg-moria-info/15 text-moria-info hover:bg-moria-info/30 cursor-pointer transition-colors"
-      >{{ itemActionLabel(item) }} {{ item.name }}<span v-if="item.quantity && item.quantity > 1" class="opacity-60 ml-1">x{{ item.quantity }}</span></button>
+      >{{ itemActionLabel(item) }} {{ item.name }}<span v-if="item.count > 1" class="opacity-60 ml-1">x{{ item.count }}</span></button>
 
       <!-- Room actions -->
       <button
