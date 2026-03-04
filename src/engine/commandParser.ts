@@ -99,6 +99,16 @@ export function parseCommand(input: string): ParsedCommand {
     return { type: 'solve', target: rest || undefined, raw }
   }
 
+  // Search
+  if (verb === 'search' || verb === 'loot' || verb === 'rummage') {
+    return { type: 'search', target: rest || undefined, raw }
+  }
+
+  // Destroy
+  if (verb === 'destroy' || verb === 'smash' || verb === 'break') {
+    return { type: 'destroy', target: rest || undefined, raw }
+  }
+
   // Info commands
   const infoCommands: Record<string, CommandType> = {
     inventory: 'inventory', inv: 'inventory', i: 'inventory', bag: 'inventory',

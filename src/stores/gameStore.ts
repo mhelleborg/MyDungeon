@@ -13,6 +13,8 @@ import { attemptFlee, attemptStealth } from '../engine/handlers/fleeHandler'
 import { canRest, resolveRest } from '../engine/handlers/restHandler'
 import { talkToNPC, listTradeOffers, buyFromNPC } from '../engine/handlers/npcHandler'
 import { attemptPuzzle, getPuzzleHint } from '../engine/handlers/puzzleHandler'
+import { roomInteractions, trapDestroyText } from '../data/roomInteractions'
+import { examineInteraction, resolveSearch } from '../engine/handlers/interactHandler'
 import { npcs, roomNPCs } from '../data/npcs'
 import { puzzles, roomPuzzles } from '../data/puzzles'
 import type { DifficultyLevel } from '../types/difficulty'
@@ -42,6 +44,8 @@ export const useGameStore = defineStore('game', () => {
   const interactedNPCs = ref<Set<string>>(new Set())
   const solvedPuzzles = ref<Set<string>>(new Set())
   const revealedExits = ref<Set<string>>(new Set())
+  const destroyedTraps = ref<Set<string>>(new Set())
+  const searchedInteractions = ref<Set<string>>(new Set())
 
   const currentRoom = computed(() => getRoom(currentRoomId.value))
 
@@ -89,6 +93,7 @@ export const useGameStore = defineStore('game', () => {
     const combatStore = useCombatStore()
     if (!combatStore.inCombat) {
       clearedRooms.value.add(currentRoomId.value)
+      useStatsStore().checkMidRunAchievements()
     }
   }
 
@@ -104,6 +109,8 @@ export const useGameStore = defineStore('game', () => {
     interactedNPCs.value = new Set()
     solvedPuzzles.value = new Set()
     revealedExits.value = new Set()
+    destroyedTraps.value = new Set()
+    searchedInteractions.value = new Set()
     applyLightState({ hasLight: false, turnsRemaining: 0, permanent: false })
 
     roomItems.value = {}
@@ -207,6 +214,9 @@ export const useGameStore = defineStore('game', () => {
       pushLogs(combatStore.startCombat(room.enemies, dark))
     }
 
+    // Mid-run achievements
+    useStatsStore().checkMidRunAchievements()
+
     // Victory
     if (roomId === 'east-gate') {
       log('You emerge from the darkness into blinding sunlight. The Mines of Moria lie behind you.', 'narrative')
@@ -238,6 +248,8 @@ export const useGameStore = defineStore('game', () => {
       case 'drop':    handleDrop(cmd); break
       case 'use':     handleUse(cmd); break
       case 'equip':   handleEquip(cmd); break
+      case 'search':  handleSearch(cmd); break
+      case 'destroy': handleDestroy(); break
       case 'disarm':  handleDisarm(); break
       case 'flee':    handleFlee(); break
       case 'sneak':   handleSneak(cmd); break
@@ -338,7 +350,7 @@ export const useGameStore = defineStore('game', () => {
     // Check for puzzle hints (examine runes, levers, inscription, doors, etc.)
     const puzzleIds = roomPuzzles[currentRoomId.value]
     if (puzzleIds) {
-      const examineTerms = ['rune', 'lever', 'inscription', 'door', 'forge', 'wall', 'symbol', 'carving']
+      const examineTerms = ['rune', 'lever', 'inscription', 'door', 'forge', 'wall', 'symbol', 'carving', 'gargoyle', 'ledge', 'stair', 'shaft']
       const target = cmd.target!.toLowerCase()
       if (examineTerms.some(t => target.includes(t))) {
         for (const pid of puzzleIds) {
@@ -350,6 +362,19 @@ export const useGameStore = defineStore('game', () => {
           }
         }
       }
+    }
+
+    // Check room interactions (data-driven examine responses)
+    const interactions = roomInteractions[currentRoomId.value]
+    if (interactions) {
+      const result = examineInteraction(
+        interactions,
+        cmd.target!,
+        clearedRooms.value.has(currentRoomId.value),
+        disarmedTraps.value.has(currentRoomId.value),
+        destroyedTraps.value.has(currentRoomId.value),
+      )
+      if (result.found) { pushLogs(result.logs); return }
     }
 
     // Check for hidden exits revealed by examining (walls, floor, etc.)
@@ -377,6 +402,49 @@ export const useGameStore = defineStore('game', () => {
       const npc = npcIds.map(id => npcs[id]).find(n => n && n.name.toLowerCase().includes(cmd.target!.toLowerCase()))
       if (npc) {
         log(`${npc.name}: ${npc.description}`, 'info')
+        return
+      }
+    }
+
+    // Dynamic examine: floor/ground/items
+    if (['floor', 'ground', 'items'].some(t => examTarget.includes(t))) {
+      const groundItems = roomItems.value[currentRoomId.value]
+      if (groundItems && groundItems.length > 0) {
+        const names = groundItems.map(id => itemDb[id]?.name || id).join(', ')
+        log(`On the ground you see: ${names}.`, 'info')
+      } else if (clearedRooms.value.has(currentRoomId.value)) {
+        log('The floor is littered with the aftermath of battle, but nothing of value remains.', 'info')
+      } else {
+        log('The ancient stone floor stretches before you, worn smooth by ages of use.', 'info')
+      }
+      return
+    }
+
+    // Dynamic examine: body/corpse/bones
+    if (['body', 'corpse', 'bones'].some(t => examTarget.includes(t))) {
+      const combatStore = useCombatStore()
+      if (combatStore.inCombat) {
+        log('The enemies are still very much alive!', 'info')
+      } else if (clearedRooms.value.has(currentRoomId.value)) {
+        log('The bodies of the fallen lie where they dropped. Their fighting days are over.', 'info')
+      } else {
+        log('You see old bones scattered about — remnants of those who came before you.', 'info')
+      }
+      return
+    }
+
+    // Dynamic examine: room/area/surroundings → delegate to look
+    if (['room', 'area', 'surroundings', 'around'].some(t => examTarget.includes(t))) {
+      handleLook()
+      return
+    }
+
+    // Examine ground items by name
+    const groundItems = roomItems.value[currentRoomId.value]
+    if (groundItems) {
+      const groundItem = groundItems.map(id => itemDb[id]).find(i => i && i.name.toLowerCase().includes(cmd.target!.toLowerCase()))
+      if (groundItem) {
+        log(`${groundItem.name}: ${groundItem.description}`, 'info')
         return
       }
     }
@@ -440,6 +508,18 @@ export const useGameStore = defineStore('game', () => {
 
     groundItems.splice(idx, 1)
     const playerStore = usePlayerStore()
+
+    // Gold goes directly to gold count, not inventory
+    if (itemId === 'gold-coins') {
+      const amount = item.quantity || item.value || 10
+      if (playerStore.player) {
+        playerStore.player.gold += amount
+        log(`Picked up ${amount} gold coins. (Total: ${playerStore.player.gold}g)`, 'loot')
+      }
+      useStatsStore().recordItemFound(item.id)
+      return
+    }
+
     pushLogs(playerStore.addItem(item))
     useStatsStore().recordItemFound(item.id)
   }
@@ -465,7 +545,30 @@ export const useGameStore = defineStore('game', () => {
     const item = playerStore.inventory.find(i =>
       i.name.toLowerCase().includes(cmd.target!.toLowerCase())
     )
-    if (!item) { log(`You don't have any "${cmd.target}".`, 'error'); return }
+    if (!item) {
+      // Check for room use-actions (e.g. fire pit)
+      const roomInts = roomInteractions[currentRoomId.value]
+      if (roomInts) {
+        const target = cmd.target!.toLowerCase()
+        const match = roomInts.find(i =>
+          i.action?.verb === 'use' && i.keywords.some(k => target.includes(k))
+        )
+        if (match?.action) {
+          if (match.action.requiresCleared && !clearedRooms.value.has(currentRoomId.value)) {
+            log('It\'s too dangerous to do that while enemies are nearby!', 'error')
+            return
+          }
+          log(match.action.successText, 'info')
+          if (match.action.grantsLight) {
+            applyLightState(lightTorch())
+            if (currentRoom.value?.dark) handleLook()
+          }
+          return
+        }
+      }
+      log(`You don't have any "${cmd.target}".`, 'error')
+      return
+    }
 
     if (item.id === 'torch') {
       applyLightState(lightTorch())
@@ -491,6 +594,76 @@ export const useGameStore = defineStore('game', () => {
     )
     if (!item) { log(`You don't have any "${cmd.target}".`, 'error'); return }
     pushLogs(playerStore.equipItem(item.id))
+  }
+
+  // ── Search ───────────────────────────────────────────────────
+  function handleSearch(cmd: ParsedCommand) {
+    const combatStore = useCombatStore()
+    if (combatStore.inCombat) { log('You can\'t search while in combat!', 'error'); return }
+    if (!cmd.target) { log('Search what? Usage: search <target>', 'error'); return }
+
+    const interactions = roomInteractions[currentRoomId.value]
+    if (!interactions) { log('There is nothing worth searching here.', 'info'); return }
+
+    const target = cmd.target.toLowerCase()
+    const match = interactions.find(i =>
+      i.action?.verb === 'search' && i.keywords.some(k => target.includes(k))
+    )
+    if (!match?.action) { log(`You don't see anything to search matching "${cmd.target}".`, 'info'); return }
+
+    const searchKey = `${currentRoomId.value}:${match.keywords[0]}`
+    if (searchedInteractions.value.has(searchKey)) {
+      log('You have already searched here thoroughly. There is nothing more to find.', 'info')
+      return
+    }
+
+    if (match.action.requiresCleared && !clearedRooms.value.has(currentRoomId.value)) {
+      log('It\'s too dangerous to search here while enemies lurk nearby!', 'error')
+      return
+    }
+
+    const playerStore = usePlayerStore()
+    if (!playerStore.player) return
+
+    const result = resolveSearch(match, playerStore.player.abilities)
+    pushLogs(result.logs)
+    searchedInteractions.value.add(searchKey)
+
+    if (result.success && result.rewardItems) {
+      for (const itemId of result.rewardItems) {
+        if (!roomItems.value[currentRoomId.value]) roomItems.value[currentRoomId.value] = []
+        roomItems.value[currentRoomId.value]!.push(itemId)
+      }
+    }
+  }
+
+  // ── Destroy ─────────────────────────────────────────────────
+  function handleDestroy() {
+    const combatStore = useCombatStore()
+    if (combatStore.inCombat) { log('You can\'t do that while in combat!', 'error'); return }
+
+    const room = currentRoom.value
+    if (!room) return
+
+    if (!room.trap) { log('There is nothing to destroy here.', 'error'); return }
+
+    if (destroyedTraps.value.has(currentRoomId.value)) {
+      log('The trap here has already been destroyed.', 'info')
+      return
+    }
+
+    if (!disarmedTraps.value.has(currentRoomId.value)) {
+      log('The trap is still armed! You should disarm it first before trying to destroy it.', 'error')
+      return
+    }
+
+    destroyedTraps.value.add(currentRoomId.value)
+    const destroyText = trapDestroyText[currentRoomId.value]
+    if (destroyText) {
+      log(destroyText, 'info')
+    } else {
+      log('You destroy the trap mechanism. It will trouble no one else.', 'info')
+    }
   }
 
   // ── Disarm ─────────────────────────────────────────────────
@@ -703,12 +876,29 @@ export const useGameStore = defineStore('game', () => {
 
     const puzzle = findPuzzleInRoom()
     if (puzzle && puzzle.type === 'keyword') {
+      // Stair-descent requires rope in inventory
+      if (puzzle.id === 'stair-descent' && cmd.target.toLowerCase() === puzzle.solution) {
+        const playerStore = usePlayerStore()
+        const hasRope = playerStore.inventory.some(i => i.id === 'rope')
+        if (!hasRope) {
+          log('You don\'t have any rope. You\'d need something to lower yourself down.', 'error')
+          return
+        }
+      }
+
       const result = attemptPuzzle(puzzle, cmd.target, solvedPuzzles.value.has(puzzle.id))
       pushLogs(result.logs)
       if (result.solved) {
         solvedPuzzles.value.add(puzzle.id)
         useStatsStore().recordPuzzleSolved()
         applyPuzzleReward(result)
+
+        // Consume rope for stair-descent
+        if (puzzle.id === 'stair-descent') {
+          const playerStore = usePlayerStore()
+          playerStore.removeItem('rope')
+          log('The elven rope unties itself and coils back into your hand — but it frays and breaks from the strain.', 'narrative')
+        }
       }
       return
     }
@@ -724,12 +914,29 @@ export const useGameStore = defineStore('game', () => {
       return
     }
 
+    // Stair-descent requires rope
+    if (puzzle.id === 'stair-descent' && cmd.target.toLowerCase() === puzzle.solution) {
+      const playerStore = usePlayerStore()
+      const hasRope = playerStore.inventory.some(i => i.id === 'rope')
+      if (!hasRope) {
+        log('You don\'t have any rope. You\'d need something to lower yourself down.', 'error')
+        return
+      }
+    }
+
     const result = attemptPuzzle(puzzle, cmd.target, solvedPuzzles.value.has(puzzle.id))
     pushLogs(result.logs)
     if (result.solved) {
       solvedPuzzles.value.add(puzzle.id)
       useStatsStore().recordPuzzleSolved()
       applyPuzzleReward(result)
+
+      // Consume rope for stair-descent
+      if (puzzle.id === 'stair-descent') {
+        const playerStore = usePlayerStore()
+        playerStore.removeItem('rope')
+        log('The elven rope unties itself and coils back into your hand — but it frays and breaks from the strain.', 'narrative')
+      }
     }
   }
 
@@ -824,9 +1031,16 @@ export const useGameStore = defineStore('game', () => {
     log('trade/buy [item] - Trade with an NPC', 'info')
     log('say <word> - Speak a word aloud (for puzzles)', 'info')
     log('solve/pull <answer> - Attempt to solve a puzzle', 'info')
+    log('search <target> - Search an object for loot', 'info')
+    log('destroy - Destroy a disarmed trap', 'info')
     log('disarm - Attempt to disarm a trap', 'info')
     log('inventory - View your items', 'info')
     log('stats - View your character', 'info')
+    log('--- Keyboard Shortcuts ---', 'system')
+    log('Arrow keys - Move (when not in combat)', 'info')
+    log('L - Look, I - Inventory, H - Help', 'info')
+    log('A - Attack (combat), F - Flee (combat)', 'info')
+    log('/ - Focus command input', 'info')
   }
 
   // ── Public API ─────────────────────────────────────────────
@@ -839,6 +1053,8 @@ export const useGameStore = defineStore('game', () => {
     clearedRooms,
     roomItems,
     disarmedTraps,
+    destroyedTraps,
+    searchedInteractions,
     hasLight,
     lightTurnsRemaining,
     permanentLight,

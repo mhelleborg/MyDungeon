@@ -85,6 +85,27 @@ export const enemies: Record<string, Enemy> = {
     lootTable: ['gold-coins', 'chain-mail', 'healing-potion'],
   },
 
+  'orc-berserker': {
+    id: 'orc-berserker',
+    name: 'Orc Berserker',
+    description: 'A massive orc driven to battle-frenzy, foam flecking its lips and its eyes wild with bloodlust. It fights without regard for its own life, swinging a brutal two-handed cleaver with terrifying force.',
+    hp: 40,
+    maxHp: 40,
+    ac: 13,
+    abilities: {
+      str: 18,
+      dex: 12,
+      con: 16,
+      int: 6,
+      wis: 6,
+      cha: 8,
+    },
+    attackBonus: 6,
+    damage: '1d12+4',
+    xpReward: 150,
+    lootTable: ['gold-coins', 'healing-potion'],
+  },
+
   'cave-troll': {
     id: 'cave-troll',
     name: 'Cave Troll',
@@ -103,7 +124,7 @@ export const enemies: Record<string, Enemy> = {
     attackBonus: 6,
     damage: '2d8+4',
     xpReward: 200,
-    lootTable: ['greater-healing-potion'],
+    lootTable: ['greater-healing-potion', 'gold-coins'],
   },
 
   'watcher-tentacle': {
@@ -124,7 +145,7 @@ export const enemies: Record<string, Enemy> = {
     attackBonus: 4,
     damage: '1d8+2',
     xpReward: 75,
-    lootTable: [],
+    lootTable: ['gold-coins'],
   },
 
   'balrog': {

@@ -7,16 +7,20 @@ import PlayerStats from '../components/PlayerStats.vue'
 import InventoryPanel from '../components/InventoryPanel.vue'
 import CombatLog from '../components/CombatLog.vue'
 import MiniMap from '../components/MiniMap.vue'
+import AchievementToast from '../components/AchievementToast.vue'
 import { useGameStore } from '../stores/gameStore'
 import { usePlayerStore } from '../stores/playerStore'
 import { useStatsStore } from '../stores/statsStore'
 import { formatElapsed } from '../engine/achievements'
 import { isSoundEnabled, setSoundEnabled } from '../engine/audio'
+import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { computed, ref, watch } from 'vue'
 
 const gameStore = useGameStore()
 const playerStore = usePlayerStore()
 const statsStore = useStatsStore()
+
+useKeyboardShortcuts()
 
 // Screen effects
 const screenEffect = ref('')
@@ -111,6 +115,8 @@ const hpBarColor = computed(() => {
         <MiniMap />
       </div>
     </div>
+
+    <AchievementToast />
 
     <!-- Game Over overlay -->
     <div v-if="gameStore.phase === 'game-over'" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 overflow-y-auto">

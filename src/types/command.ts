@@ -16,6 +16,8 @@ export type CommandType =
   | 'trade'
   | 'say'
   | 'solve'
+  | 'search'
+  | 'destroy'
   | 'inventory'
   | 'stats'
   | 'help'

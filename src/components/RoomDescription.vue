@@ -3,6 +3,7 @@ import { computed, watch } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import { useCombatStore } from '../stores/combatStore'
 import { useTypewriter } from '../composables/useTypewriter'
+import BossHealthBar from './BossHealthBar.vue'
 
 const gameStore = useGameStore()
 const combatStore = useCombatStore()
@@ -55,6 +56,7 @@ function examine(name: string) {
           <span class="text-moria-info ml-2">HP: {{ enemy.hp }}/{{ enemy.maxHp }}</span>
         </div>
       </div>
+      <BossHealthBar />
     </template>
   </div>
 </template>

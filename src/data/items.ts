@@ -126,6 +126,56 @@ export const items: Record<string, Item> = {
     value: 0,
   },
 
+  // --- New Weapons ---
+  'dwarven-warhammer': {
+    id: 'dwarven-warhammer',
+    name: 'Dwarven Warhammer',
+    description: 'A mighty warhammer of dwarven steel, its head engraved with the sigil of Durin. It strikes with the weight of the mountain itself.',
+    type: 'weapon',
+    damage: '1d10+4',
+    attackBonus: 2,
+    value: 60,
+  },
+  'glamdring': {
+    id: 'glamdring',
+    name: 'Glamdring, Foe-hammer',
+    description: 'The legendary sword of Turgon, King of Gondolin. Its blade glows blue in the presence of orcs. Gandalf himself once bore this weapon.',
+    type: 'weapon',
+    damage: '2d6+3',
+    attackBonus: 3,
+    value: 200,
+  },
+
+  // --- New Armor ---
+  'dwarf-shield': {
+    id: 'dwarf-shield',
+    name: 'Dwarven Tower Shield',
+    description: 'A massive shield of dwarven iron, reinforced with bands of steel. It bears the seven stars of Durin\'s House.',
+    type: 'armor',
+    armorBonus: 5,
+    value: 50,
+  },
+
+  // --- New Potions ---
+  'miruvor': {
+    id: 'miruvor',
+    name: 'Miruvor',
+    description: 'The cordial of Imladris — a warm, fragrant draught that restores strength and hope. Even a sip brings renewed vigor.',
+    type: 'potion',
+    healing: '3d4+6',
+    consumable: true,
+    value: 75,
+  },
+
+  // --- New Quest Items ---
+  'rope': {
+    id: 'rope',
+    name: 'Elven Rope',
+    description: 'A coil of hithlain rope from Lothlórien, light and strong beyond belief. It seems to know the will of its bearer.',
+    type: 'quest',
+    value: 15,
+  },
+
   // --- Misc ---
   'watcher-pearl': {
     id: 'watcher-pearl',

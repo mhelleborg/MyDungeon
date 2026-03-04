@@ -89,7 +89,7 @@ export const achievements: Record<string, Achievement> = {
   },
 }
 
-const TOTAL_PUZZLES = 2 // speak-friend, forge-levers
+const TOTAL_PUZZLES = 5 // speak-friend, forge-levers, gargoyle-riddle, stair-descent, records-ward
 
 /**
  * Pure function: check which achievements a completed run earns.

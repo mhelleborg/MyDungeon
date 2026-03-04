@@ -47,10 +47,13 @@ const classLabel: Record<string, string> = {
       </div>
     </div>
 
-    <!-- AC & XP -->
+    <!-- AC, XP & Gold -->
     <div class="flex justify-between text-xs">
       <span><span class="text-moria-info">AC:</span> <span class="text-moria-highlight">{{ player.ac }}</span></span>
       <span><span class="text-moria-info">XP:</span> <span class="text-moria-text">{{ player.xp }}/{{ player.xpToNext }}</span></span>
+    </div>
+    <div class="text-xs">
+      <span class="text-moria-info">Gold:</span> <span class="text-amber-400">{{ player.gold }}</span>
     </div>
 
     <!-- Ability Scores -->

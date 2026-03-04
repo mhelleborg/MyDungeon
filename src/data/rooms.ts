@@ -54,11 +54,16 @@ export const rooms: Record<string, Room> = {
   'great-stairway': {
     id: 'great-stairway',
     name: 'The Great Stairway',
-    description: 'Massive steps of black stone descend and rise before you, carved from the living rock by dwarven hands of immense skill. Each step is a yard wide and perfectly level despite centuries of disuse. Gargoyles of dwarvish craft leer down from corbels overhead, their stone faces lit by the dancing shadows of your torch. The stair reaches up into darkness above and leads down into the deeper halls.',
+    description: 'Massive steps of black stone descend and rise before you, carved from the living rock by dwarven hands of immense skill. Each step is a yard wide and perfectly level despite centuries of disuse. Gargoyles of dwarvish craft leer down from corbels overhead, their stone faces lit by the dancing shadows of your torch. The stair reaches up into darkness above and leads down into the deeper halls. An orc warrior and two goblin archers lurk in the shadows, and a cloaked figure watches from behind a pillar.',
+    clearedDescription: 'The great stairway is silent now. The gargoyles leer down at the bodies of the orcs and goblins sprawled across the ancient steps. A cloaked figure stands behind a pillar, watching.',
     exits: [
       { direction: 'south', targetRoomId: 'entrance-hall' },
       { direction: 'north', targetRoomId: 'crossroads' },
       { direction: 'east', targetRoomId: 'abandoned-forge' },
+    ],
+    enemies: [
+      { enemyId: 'orc-warrior', count: 1 },
+      { enemyId: 'goblin-archer', count: 2 },
     ],
     gridX: 1,
     gridY: 3,
@@ -113,6 +118,7 @@ export const rooms: Record<string, Room> = {
       disarmDC: 12,
       damage: '1d6',
     },
+    dark: true,
     gridX: 3,
     gridY: 4,
   },
@@ -134,12 +140,16 @@ export const rooms: Record<string, Room> = {
   'crossroads': {
     id: 'crossroads',
     name: 'The Crossroads',
-    description: 'Four great passages meet here at a perfectly square intersection, each carved with the precision and artistry of master masons. Carvings of dwarvish history run the full height of the walls — scenes of mining and feasting and battle, now defaced with orcish scratchings. At the center of the floor, a great compass rose has been inlaid in contrasting stone. Four roads lead onward into the dark.',
+    description: 'Four great passages meet here at a perfectly square intersection, each carved with the precision and artistry of master masons. Carvings of dwarvish history run the full height of the walls — scenes of mining and feasting and battle, now defaced with orcish scratchings. At the center of the floor, a great compass rose has been inlaid in contrasting stone. A hulking orc berserker paces the intersection, guarding the ways. Runes above the northern door catch your eye.',
+    clearedDescription: 'The crossroads intersection lies quiet, the orc berserker\'s body slumped against the compass rose. The four passages stretch into darkness, and runes above the northern door catch your eye.',
     exits: [
       { direction: 'north', targetRoomId: 'chamber-of-records', locked: true, requiredItemId: 'door-key', lockMessage: 'The heavy iron door is locked. You need a key.' },
       { direction: 'south', targetRoomId: 'great-stairway' },
       { direction: 'east', targetRoomId: 'orc-lair' },
       { direction: 'west', targetRoomId: 'mining-shaft' },
+    ],
+    enemies: [
+      { enemyId: 'orc-berserker', count: 1 },
     ],
     items: ['healing-potion'],
     gridX: 2,
@@ -155,6 +165,7 @@ export const rooms: Record<string, Room> = {
       { direction: 'west', targetRoomId: 'secret-armory', hidden: true, revealMethod: 'examine' },
     ],
     items: ['gold-coins'],
+    dark: true,
     gridX: 1,
     gridY: 2,
   },
@@ -172,6 +183,7 @@ export const rooms: Record<string, Room> = {
       { enemyId: 'orc-warrior', count: 2 },
       { enemyId: 'orc-captain', count: 1 },
     ],
+    items: ['gold-coins'],
     gridX: 3,
     gridY: 2,
   },
@@ -186,7 +198,7 @@ export const rooms: Record<string, Room> = {
       { direction: 'east', targetRoomId: 'troll-den' },
       { direction: 'north', targetRoomId: 'endless-stair-base' },
     ],
-    items: ['balin-tome'],
+    items: ['balin-tome', 'gold-coins'],
     enemies: [
       { enemyId: 'goblin', count: 4 },
       { enemyId: 'orc-warrior', count: 1 },
@@ -219,6 +231,7 @@ export const rooms: Record<string, Room> = {
     ],
     enemies: [
       { enemyId: 'cave-troll', count: 1 },
+      { enemyId: 'orc-berserker', count: 1 },
     ],
     items: ['greater-healing-potion'],
     gridX: 3,
@@ -228,11 +241,12 @@ export const rooms: Record<string, Room> = {
   'endless-stair-base': {
     id: 'endless-stair-base',
     name: 'The Base of the Endless Stair',
-    description: 'The legendary Endless Stair of Khazad-dum begins here, spiraling in a single unbroken helix from the very foundations of the mountain to its peak, Zirakzigil. It is said that no dwarf ever counted all its steps. The carved stone of the first landing is worn smooth by uncounted generations of feet. The stair rises vertiginously upward into the mountain\'s heart, and the way east leads toward the Bridge and freedom.',
+    description: 'The legendary Endless Stair of Khazad-dum begins here, spiraling in a single unbroken helix from the very foundations of the mountain to its peak, Zirakzigil. It is said that no dwarf ever counted all its steps. The carved stone of the first landing is worn smooth by uncounted generations of feet. A ledge juts over the stair shaft — something glints far below. The way east leads toward the Bridge and freedom.',
     exits: [
       { direction: 'south', targetRoomId: 'chamber-of-records' },
       { direction: 'east', targetRoomId: 'bridge-of-khazad-dum' },
     ],
+    items: ['rope'],
     gridX: 2,
     gridY: 0,
   },
@@ -269,11 +283,11 @@ export const rooms: Record<string, Room> = {
   'secret-armory': {
     id: 'secret-armory',
     name: 'The Secret Armory',
-    description: 'Behind the false wall lies a small, pristine chamber that the orcs never found. Dwarvish weapon racks line the walls, most empty, but a few treasures remain: a healing potion in a crystal vial and the gleam of something precious in the corner. The dwarves hid this well.',
+    description: 'Behind the false wall lies a small, pristine chamber that the orcs never found. Dwarvish weapon racks line the walls, most empty, but treasures remain: a healing potion in a crystal vial, a mighty warhammer mounted on the wall, and a great tower shield bearing the sigil of Durin. The dwarves hid this well.',
     exits: [
       { direction: 'east', targetRoomId: 'mining-shaft' },
     ],
-    items: ['healing-potion'],
+    items: ['healing-potion', 'dwarven-warhammer', 'dwarf-shield'],
     gridX: 0,
     gridY: 2,
   },

@@ -29,8 +29,8 @@ const grid = computed(() => {
     rows.push(row)
   }
 
-  // Reverse so y=0 is at bottom (south is higher y)
-  return rows.reverse()
+  // Low gridY = north = top of map display
+  return rows
 })
 </script>
 

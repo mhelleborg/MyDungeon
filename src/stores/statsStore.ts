@@ -30,6 +30,15 @@ export const useStatsStore = defineStore('stats', () => {
   const unlockedAchievements = ref<Set<string>>(loadAchievements())
   const newlyUnlocked = ref<string[]>([])
 
+  // ── Toast queue for mid-run achievements ───────────────
+  interface AchievementToast {
+    id: string
+    name: string
+    description: string
+    icon: string
+  }
+  const toastQueue = ref<AchievementToast[]>([])
+
   function loadAchievements(): Set<string> {
     try {
       const stored = localStorage.getItem(ACHIEVEMENTS_KEY)
@@ -80,6 +89,44 @@ export const useStatsStore = defineStore('stats', () => {
   function recordSneakSuccess() { sneakSuccesses.value++ }
   function recordFleeAttempt() { fleeAttempts.value++ }
   function recordBalrogSlain() { balrogSlain.value = true }
+
+  function dismissToast(id: string) {
+    toastQueue.value = toastQueue.value.filter(t => t.id !== id)
+  }
+
+  function checkMidRunAchievements() {
+    const stats: RunStats = {
+      roomsExplored: roomsExplored.value,
+      totalRooms: totalRooms.value,
+      enemiesKilled: enemiesKilled.value,
+      damageDealt: damageDealt.value,
+      damageTaken: damageTaken.value,
+      itemsFound: itemsFound.value,
+      potionsUsed: potionsUsed.value,
+      puzzlesSolved: puzzlesSolved.value,
+      secretsFound: secretsFound.value,
+      sneakSuccesses: sneakSuccesses.value,
+      fleeAttempts: fleeAttempts.value,
+      startTime: startTime.value,
+      playerClass: playerClass.value,
+      difficulty: difficulty.value,
+      balrogSlain: balrogSlain.value,
+    }
+
+    const earned = checkAchievements(stats, foundItems.value)
+    for (const id of earned) {
+      if (!unlockedAchievements.value.has(id)) {
+        unlockedAchievements.value.add(id)
+        const ach = achievements[id]
+        if (ach) {
+          toastQueue.value.push({ id: ach.id, name: ach.name, description: ach.description, icon: ach.icon })
+          // Auto-dismiss after 5s
+          setTimeout(() => dismissToast(ach.id), 5000)
+        }
+      }
+    }
+    saveAchievements()
+  }
 
   // ── End-of-run achievement check ─────────────────────────
   function checkEndOfRun(): string[] {
@@ -142,8 +189,11 @@ export const useStatsStore = defineStore('stats', () => {
     unlockedAchievements,
     newlyUnlocked,
     allAchievements,
+    toastQueue,
     // Actions
     initStats,
+    dismissToast,
+    checkMidRunAchievements,
     recordRoomExplored,
     recordEnemyKilled,
     recordDamageDealt,
