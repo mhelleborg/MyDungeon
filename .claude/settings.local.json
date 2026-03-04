@@ -5,7 +5,12 @@
       "Bash(cp:*)",
       "Bash(npm install:*)",
       "Bash(npx vue-tsc:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(node:*)",
+      "Bash(python3:*)",
+      "Bash(grep:*)",
+      "Bash(git add:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
