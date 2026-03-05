@@ -28,7 +28,7 @@ function examine(name: string) {
 </script>
 
 <template>
-  <div class="flex-1 p-4 overflow-y-auto border border-moria-border rounded bg-moria-panel/50">
+  <div class="flex-1 p-4 overflow-y-auto border border-moria-border rounded bg-moria-panel/50 max-h-[40vh] md:max-h-none">
     <template v-if="room">
       <h2 class="text-xl font-bold text-moria-highlight mb-2">{{ room.name }}</h2>
       <p class="text-moria-text leading-relaxed mb-3 cursor-pointer" @click="skip">
@@ -39,7 +39,7 @@ function examine(name: string) {
           <button
             @click="move(exit.direction)"
             :disabled="combatStore.inCombat"
-            class="text-moria-highlight transition-colors"
+            class="text-moria-highlight transition-colors min-h-[44px] md:min-h-0 inline-flex items-center"
             :class="combatStore.inCombat
               ? 'opacity-50 cursor-not-allowed'
               : 'hover:text-moria-success underline decoration-moria-highlight/40 hover:decoration-moria-success cursor-pointer'"

@@ -26,7 +26,7 @@ function move(dir: Direction) {
       <button
         @click="move('north')"
         :disabled="!availableExits.has('north') || combatStore.inCombat"
-        class="px-3 py-2 text-sm font-bold rounded transition-colors"
+        class="px-3 py-2 text-sm font-bold rounded transition-colors min-w-[44px] min-h-[44px]"
         :class="availableExits.has('north') && !combatStore.inCombat
           ? 'bg-moria-border text-moria-highlight hover:bg-moria-highlight hover:text-moria-bg cursor-pointer'
           : 'bg-moria-bg text-moria-border cursor-not-allowed'"
@@ -37,7 +37,7 @@ function move(dir: Direction) {
       <button
         @click="move('west')"
         :disabled="!availableExits.has('west') || combatStore.inCombat"
-        class="px-3 py-2 text-sm font-bold rounded transition-colors"
+        class="px-3 py-2 text-sm font-bold rounded transition-colors min-w-[44px] min-h-[44px]"
         :class="availableExits.has('west') && !combatStore.inCombat
           ? 'bg-moria-border text-moria-highlight hover:bg-moria-highlight hover:text-moria-bg cursor-pointer'
           : 'bg-moria-bg text-moria-border cursor-not-allowed'"
@@ -46,7 +46,7 @@ function move(dir: Direction) {
       <button
         @click="move('east')"
         :disabled="!availableExits.has('east') || combatStore.inCombat"
-        class="px-3 py-2 text-sm font-bold rounded transition-colors"
+        class="px-3 py-2 text-sm font-bold rounded transition-colors min-w-[44px] min-h-[44px]"
         :class="availableExits.has('east') && !combatStore.inCombat
           ? 'bg-moria-border text-moria-highlight hover:bg-moria-highlight hover:text-moria-bg cursor-pointer'
           : 'bg-moria-bg text-moria-border cursor-not-allowed'"
@@ -57,7 +57,7 @@ function move(dir: Direction) {
       <button
         @click="move('south')"
         :disabled="!availableExits.has('south') || combatStore.inCombat"
-        class="px-3 py-2 text-sm font-bold rounded transition-colors"
+        class="px-3 py-2 text-sm font-bold rounded transition-colors min-w-[44px] min-h-[44px]"
         :class="availableExits.has('south') && !combatStore.inCombat
           ? 'bg-moria-border text-moria-highlight hover:bg-moria-highlight hover:text-moria-bg cursor-pointer'
           : 'bg-moria-bg text-moria-border cursor-not-allowed'"

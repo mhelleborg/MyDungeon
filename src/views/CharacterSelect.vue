@@ -93,7 +93,7 @@ function startAdventure() {
       <!-- Difficulty selection -->
       <div class="mb-8">
         <label class="text-moria-info text-xs block mb-2">DIFFICULTY</label>
-        <div class="flex gap-2">
+        <div class="flex flex-col sm:flex-row gap-2">
           <button
             v-for="diff in difficulties"
             :key="diff.id"

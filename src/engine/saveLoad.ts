@@ -53,6 +53,8 @@ export function serialize(): SaveData {
     roomLookCounts: { ...gameStore.roomLookCounts },
     companions: JSON.parse(JSON.stringify(gameStore.companions)),
     recruitableNPCsOffered: setToArray(gameStore.recruitableNPCsOffered),
+    seenEncounters: setToArray(gameStore.seenEncounters),
+    activeEncounter: gameStore.activeEncounter ? JSON.parse(JSON.stringify(gameStore.activeEncounter)) : null,
 
     // combatStore
     inCombat: combatStore.inCombat,
@@ -116,6 +118,8 @@ export function deserialize(data: SaveData): void {
   gameStore.roomLookCounts = data.roomLookCounts
   gameStore.companions = data.companions
   gameStore.recruitableNPCsOffered = arrayToSet(data.recruitableNPCsOffered)
+  gameStore.seenEncounters = arrayToSet(data.seenEncounters ?? [])
+  gameStore.activeEncounter = data.activeEncounter ?? null
 
   // combatStore
   combatStore.inCombat = data.inCombat

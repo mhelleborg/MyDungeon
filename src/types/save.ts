@@ -7,6 +7,7 @@ import type { GamePhase } from '../stores/gameStore'
 import type { DifficultyLevel } from './difficulty'
 import type { PlayerClass } from './character'
 import type { BossPhase } from '../engine/handlers/bossHandler'
+import type { ActiveEncounter } from './encounter'
 
 export const SAVE_VERSION = 1
 export const SAVE_KEY = 'moria-save'
@@ -41,6 +42,8 @@ export interface SaveData {
   roomLookCounts: Record<string, number>
   companions: Companion[]
   recruitableNPCsOffered: string[]
+  seenEncounters: string[]
+  activeEncounter: ActiveEncounter | null
 
   // combatStore
   inCombat: boolean

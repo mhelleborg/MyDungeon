@@ -65,12 +65,19 @@ const hpBarColor = computed(() => {
   if (hpPercent.value > 30) return 'bg-amber-500'
   return 'bg-moria-danger'
 })
+
+// Mobile sidebar tab
+type MobileTab = 'stats' | 'inv' | 'map' | null
+const mobileTab = ref<MobileTab>(null)
+function toggleMobileTab(tab: MobileTab) {
+  mobileTab.value = mobileTab.value === tab ? null : tab
+}
 </script>
 
 <template>
   <div class="h-screen flex flex-col bg-moria-bg" :class="screenEffect">
     <!-- Header -->
-    <header class="flex items-center justify-between px-4 py-2 border-b border-moria-border bg-moria-panel/50">
+    <header class="flex flex-wrap items-center justify-between px-4 py-2 gap-1 border-b border-moria-border bg-moria-panel/50">
       <h1 class="text-lg font-bold text-moria-highlight tracking-wider">MINES OF MORIA</h1>
       <div v-if="playerStore.player" class="flex items-center gap-3">
         <button
@@ -82,20 +89,26 @@ const hpBarColor = computed(() => {
           :title="soundOn ? 'Sound On' : 'Sound Off'"
         >{{ soundOn ? 'SND' : 'MUTE' }}</button>
       </div>
-      <div v-if="playerStore.player" class="flex items-center gap-3">
+      <div v-if="playerStore.player" class="flex items-center gap-2">
         <span class="text-moria-info text-xs">HP</span>
-        <div class="w-32 h-2 bg-moria-bg rounded overflow-hidden">
+        <div class="w-24 sm:w-32 h-2 bg-moria-bg rounded overflow-hidden">
           <div :class="hpBarColor" class="h-full transition-all duration-300" :style="{ width: hpPercent + '%' }"></div>
         </div>
-        <span class="text-moria-text text-xs font-mono">{{ playerStore.player.hp }}/{{ playerStore.player.maxHp }}</span>
+        <span class="text-moria-text text-xs font-mono hidden sm:inline">{{ playerStore.player.hp }}/{{ playerStore.player.maxHp }}</span>
       </div>
     </header>
 
     <!-- Main content -->
-    <div class="flex-1 flex overflow-hidden">
-      <!-- Left column: room + controls + log + input -->
-      <div class="flex-1 flex flex-col p-3 gap-3 min-w-0">
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <!-- Left column: room + controls + log -->
+      <div class="flex-1 flex flex-col p-2 md:p-3 gap-2 md:gap-3 min-w-0">
         <RoomDescription />
+
+        <!-- Encounter hint -->
+        <div v-if="gameStore.activeEncounter" class="px-3 py-2 text-sm border rounded border-moria-highlight/40 bg-moria-highlight/10 text-moria-highlight">
+          <template v-if="gameStore.activeEncounter.type === 'riddle'">A riddle awaits your answer... (type "say &lt;answer&gt;")</template>
+          <template v-else-if="gameStore.activeEncounter.type === 'merchant'">A merchant is nearby... (type "trade" to see wares)</template>
+        </div>
 
         <ActionBar />
 
@@ -105,15 +118,39 @@ const hpBarColor = computed(() => {
         </div>
 
         <CombatLog />
-        <CommandInput />
       </div>
 
-      <!-- Right sidebar -->
-      <div class="w-64 flex flex-col gap-3 p-3 border-l border-moria-border overflow-y-auto">
+      <!-- Desktop sidebar -->
+      <div class="hidden md:flex w-64 flex-col gap-3 p-3 border-l border-moria-border overflow-y-auto">
         <PlayerStats />
         <InventoryPanel />
         <MiniMap />
       </div>
+    </div>
+
+    <!-- Mobile tab bar + panels -->
+    <div class="md:hidden border-t border-moria-border">
+      <div class="flex">
+        <button
+          v-for="tab in (['stats', 'inv', 'map'] as const)"
+          :key="tab"
+          @click="toggleMobileTab(tab)"
+          class="flex-1 px-3 py-2 text-xs font-bold text-center transition-colors cursor-pointer"
+          :class="mobileTab === tab
+            ? 'bg-moria-highlight/20 text-moria-highlight border-b-2 border-moria-highlight'
+            : 'text-moria-info hover:text-moria-text'"
+        >{{ tab === 'stats' ? 'STATS' : tab === 'inv' ? 'INV' : 'MAP' }}</button>
+      </div>
+      <div v-if="mobileTab" class="max-h-48 overflow-y-auto p-2">
+        <PlayerStats v-if="mobileTab === 'stats'" />
+        <InventoryPanel v-if="mobileTab === 'inv'" />
+        <MiniMap v-if="mobileTab === 'map'" />
+      </div>
+    </div>
+
+    <!-- Command input (sticky at bottom) -->
+    <div class="p-2 md:px-3 md:pb-3 border-t md:border-t-0 border-moria-border">
+      <CommandInput />
     </div>
 
     <AchievementToast />

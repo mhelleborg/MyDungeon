@@ -50,7 +50,7 @@ defineExpose({ focus: () => inputEl.value?.focus() })
       type="text"
       placeholder="Enter command..."
       data-command-input
-      class="flex-1 bg-transparent text-moria-text font-mono text-sm outline-none placeholder-moria-border"
+      class="flex-1 bg-transparent text-moria-text font-mono text-base md:text-sm outline-none placeholder-moria-border"
       autofocus
     />
   </div>
