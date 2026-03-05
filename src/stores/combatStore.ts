@@ -21,6 +21,7 @@ export const useCombatStore = defineStore('combat', () => {
   const darkCombat = ref(false)
   const bossPhase = ref<BossPhase>(0)
   const bossFallBack = ref(false)
+  const lastCritical = ref(false)
 
   const livingEnemies = computed(() => combatEnemies.value.filter(e => e.hp > 0))
   const combatOver = computed(() => inCombat.value && livingEnemies.value.length === 0)
@@ -136,6 +137,7 @@ export const useCombatStore = defineStore('combat', () => {
     logs.push(...result.logs)
 
     const statsStore = useStatsStore()
+    lastCritical.value = result.hit && result.critical
     if (result.hit) {
       statsStore.recordDamageDealt(result.damage)
       playSound(result.critical ? 'crit' : 'hit')
@@ -438,6 +440,7 @@ export const useCombatStore = defineStore('combat', () => {
     bossPhase,
     bossFallBack,
     isBossFight,
+    lastCritical,
     startCombat,
     doPlayerAttack,
     doPlayerCast,

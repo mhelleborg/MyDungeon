@@ -75,3 +75,38 @@ body {
 .screen-flash-gold {
   animation: screen-flash-gold 0.6s ease-out;
 }
+
+/* Combat start flash */
+@keyframes screen-flash-combat-start {
+  0% { box-shadow: inset 0 0 80px rgba(192, 57, 43, 0.6); }
+  50% { box-shadow: inset 0 0 40px rgba(212, 168, 67, 0.4); }
+  100% { box-shadow: inset 0 0 0 transparent; }
+}
+
+.screen-flash-combat-start {
+  animation: screen-flash-combat-start 0.6s ease-out;
+}
+
+/* Critical hit effect */
+@keyframes screen-crit-hit {
+  0% { box-shadow: inset 0 0 80px rgba(212, 168, 67, 0.7); transform: translate(0, 0); }
+  20% { transform: translate(-5px, 3px); }
+  40% { transform: translate(5px, -3px); }
+  60% { transform: translate(-3px, -2px); }
+  80% { transform: translate(3px, 2px); box-shadow: inset 0 0 20px rgba(212, 168, 67, 0.2); }
+  100% { box-shadow: inset 0 0 0 transparent; transform: translate(0, 0); }
+}
+
+.screen-crit-hit {
+  animation: screen-crit-hit 0.5s ease-out;
+}
+
+/* Blood vignette pulse */
+@keyframes blood-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.animate-blood-pulse {
+  animation: blood-pulse 1.5s ease-in-out infinite;
+}

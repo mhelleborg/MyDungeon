@@ -4,6 +4,7 @@ import { useGameStore } from '../stores/gameStore'
 import { useCombatStore } from '../stores/combatStore'
 import { useTypewriter } from '../composables/useTypewriter'
 import BossHealthBar from './BossHealthBar.vue'
+import EnemyCard from './EnemyCard.vue'
 
 const gameStore = useGameStore()
 const combatStore = useCombatStore()
@@ -48,13 +49,12 @@ function examine(name: string) {
       </p>
       <div v-if="combatStore.inCombat" class="mt-3 p-2 border border-moria-danger/50 rounded bg-moria-danger/10">
         <p class="text-moria-danger font-bold text-sm mb-1">COMBAT</p>
-        <div v-for="enemy in combatStore.livingEnemies" :key="enemy.instanceId" class="text-sm">
-          <button
-            @click="examine(enemy.name)"
-            class="text-red-400 hover:text-red-300 underline decoration-red-400/40 hover:decoration-red-300 cursor-pointer transition-colors"
-          >{{ enemy.name }}</button>
-          <span class="text-moria-info ml-2">HP: {{ enemy.hp }}/{{ enemy.maxHp }}</span>
-        </div>
+        <EnemyCard
+          v-for="enemy in combatStore.combatEnemies.filter(e => !combatStore.isBossFight || e.id !== 'balrog')"
+          :key="enemy.instanceId"
+          :enemy="enemy"
+          @examine="examine"
+        />
       </div>
       <BossHealthBar />
     </template>

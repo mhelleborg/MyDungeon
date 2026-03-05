@@ -9,6 +9,7 @@ import CombatLog from '../components/CombatLog.vue'
 import MiniMap from '../components/MiniMap.vue'
 import AchievementToast from '../components/AchievementToast.vue'
 import { useGameStore } from '../stores/gameStore'
+import { useCombatStore } from '../stores/combatStore'
 import { usePlayerStore } from '../stores/playerStore'
 import { useStatsStore } from '../stores/statsStore'
 import { formatElapsed } from '../engine/achievements'
@@ -17,6 +18,7 @@ import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { computed, ref, watch } from 'vue'
 
 const gameStore = useGameStore()
+const combatStore = useCombatStore()
 const playerStore = usePlayerStore()
 const statsStore = useStatsStore()
 
@@ -45,6 +47,28 @@ watch(() => playerStore.player?.level, (newLvl, oldLvl) => {
   if (newLvl !== undefined && oldLvl !== undefined && newLvl > oldLvl) {
     triggerEffect('screen-flash-gold')
   }
+})
+
+// Combat start flash
+watch(() => combatStore.inCombat, (now, prev) => {
+  if (now && !prev) triggerEffect('screen-flash-combat-start')
+})
+
+// Critical hit flash
+watch(() => combatStore.lastCritical, (val) => {
+  if (val) {
+    triggerEffect('screen-crit-hit')
+    combatStore.lastCritical = false
+  }
+})
+
+// Low HP blood vignette
+const lowHpIntensity = computed(() => {
+  const p = playerStore.player
+  if (!p) return 0
+  const ratio = p.hp / p.maxHp
+  if (ratio >= 0.3) return 0
+  return Math.min(1, (0.3 - ratio) / 0.3)
 })
 
 // Sound toggle
@@ -152,6 +176,16 @@ function toggleMobileTab(tab: MobileTab) {
     <div class="p-2 md:px-3 md:pb-3 border-t md:border-t-0 border-moria-border">
       <CommandInput />
     </div>
+
+    <!-- Low HP blood vignette -->
+    <div
+      v-if="lowHpIntensity > 0"
+      class="fixed inset-0 pointer-events-none z-40"
+      :class="{ 'animate-blood-pulse': lowHpIntensity > 0.5 }"
+      :style="{
+        boxShadow: `inset 0 0 ${60 + lowHpIntensity * 80}px rgba(192, 57, 43, ${0.2 + lowHpIntensity * 0.5})`
+      }"
+    ></div>
 
     <AchievementToast />
 
