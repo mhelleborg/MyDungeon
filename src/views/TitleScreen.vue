@@ -81,6 +81,12 @@ function startGame() {
       <div class="mt-6 text-moria-border text-xs">
         A text adventure using simplified D&D rules
       </div>
+      <a
+        href="https://github.com/mhelleborg/MyDungeon/issues/new"
+        target="_blank"
+        rel="noopener"
+        class="mt-3 inline-block text-moria-info text-xs hover:text-moria-highlight transition-colors underline decoration-moria-info/40"
+      >Ideas or feedback?</a>
     </div>
   </div>
 </template>

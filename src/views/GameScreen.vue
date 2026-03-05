@@ -104,6 +104,13 @@ function toggleMobileTab(tab: MobileTab) {
     <header class="flex flex-wrap items-center justify-between px-4 py-2 gap-1 border-b border-moria-border bg-moria-panel/50">
       <h1 class="text-lg font-bold text-moria-highlight tracking-wider">MINES OF MORIA</h1>
       <div v-if="playerStore.player" class="flex items-center gap-3">
+        <a
+          href="https://github.com/mhelleborg/MyDungeon/issues/new"
+          target="_blank"
+          rel="noopener"
+          class="text-xs px-2 py-1 border border-moria-border text-moria-info rounded hover:text-moria-highlight hover:border-moria-highlight/50 transition-colors"
+          title="Send feedback or ideas"
+        >FEEDBACK</a>
         <button
           @click="toggleSound"
           class="text-xs px-2 py-1 border rounded transition-colors cursor-pointer"

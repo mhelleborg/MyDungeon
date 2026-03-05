@@ -1,6 +1,10 @@
 # Mines of Moria
 
+**[Play the game](https://mhelleborg.github.io/MyDungeon/)**
+
 A text-based dungeon crawler set in the Mines of Moria from The Lord of the Rings. Navigate dark halls, battle orcs and goblins, and find your way to the East Gate — if you can survive.
+
+Have ideas or found a bug? [Open an issue](https://github.com/mhelleborg/MyDungeon/issues/new)!
 
 ## Features
 
