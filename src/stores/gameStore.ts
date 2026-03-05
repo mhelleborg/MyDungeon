@@ -23,6 +23,17 @@ import { playSound } from '../engine/audio'
 import type { Companion } from '../types/companion'
 import { checkRecruitment, rollCompanionComment } from '../engine/handlers/companionHandler'
 import { saveGame, loadGame, deleteSave } from '../engine/saveLoad'
+import { encounters as encounterPool } from '../data/encounters'
+import {
+  shouldTriggerEncounter,
+  selectEncounter,
+  resolveEncounter,
+  answerRiddle,
+  listMerchantOffers,
+  buyFromMerchant,
+} from '../engine/handlers/encounterHandler'
+import type { ActiveEncounter } from '../types/encounter'
+import type { RiddleEncounter } from '../types/encounter'
 import { usePlayerStore } from './playerStore'
 import { useCombatStore } from './combatStore'
 import { useStatsStore } from './statsStore'
@@ -52,6 +63,8 @@ export const useGameStore = defineStore('game', () => {
   const roomLookCounts = ref<Record<string, number>>({})
   const companions = ref<Companion[]>([])
   const recruitableNPCsOffered = ref<Set<string>>(new Set())
+  const seenEncounters = ref<Set<string>>(new Set())
+  const activeEncounter = ref<ActiveEncounter | null>(null)
 
   const currentRoom = computed(() => getRoom(currentRoomId.value))
 
@@ -88,11 +101,33 @@ export const useGameStore = defineStore('game', () => {
   function checkDeath(): boolean {
     const playerStore = usePlayerStore()
     if (!playerStore.isAlive) {
+      const combatStore = useCombatStore()
+      if (combatStore.inCombat) combatStore.endCombat()
       playSound('death')
+      deleteSave()
       phase.value = 'game-over'
       return true
     }
     return false
+  }
+
+  function applyEncounterRewards(result: { gold?: number; healHp?: number; xp?: number; itemIds?: string[]; damage?: number }) {
+    const playerStore = usePlayerStore()
+    if (!playerStore.player) return
+    if (result.gold) playerStore.player.gold += result.gold
+    if (result.healHp) playerStore.player.hp = Math.min(playerStore.player.maxHp, playerStore.player.hp + result.healHp)
+    if (result.xp) pushLogs(playerStore.addXp(result.xp))
+    if (result.damage) {
+      playerStore.player.hp -= result.damage
+      useStatsStore().recordDamageTaken(result.damage)
+      checkDeath()
+    }
+    if (result.itemIds) {
+      for (const itemId of result.itemIds) {
+        if (!roomItems.value[currentRoomId.value]) roomItems.value[currentRoomId.value] = []
+        roomItems.value[currentRoomId.value]!.push(itemId)
+      }
+    }
   }
 
   function markRoomCleared() {
@@ -105,6 +140,9 @@ export const useGameStore = defineStore('game', () => {
 
   // ── Init ───────────────────────────────────────────────────
   function initGame() {
+    const combatStore = useCombatStore()
+    if (combatStore.inCombat) combatStore.endCombat()
+
     gameLog.value = []
     visitedRooms.value = new Set()
     clearedRooms.value = new Set()
@@ -120,6 +158,8 @@ export const useGameStore = defineStore('game', () => {
     roomLookCounts.value = {}
     companions.value = []
     recruitableNPCsOffered.value = new Set()
+    seenEncounters.value = new Set()
+    activeEncounter.value = null
     applyLightState({ hasLight: false, turnsRemaining: 0, permanent: false })
 
     roomItems.value = {}
@@ -151,6 +191,7 @@ export const useGameStore = defineStore('game', () => {
 
     if (currentRoomId.value !== roomId) {
       previousRoomId.value = currentRoomId.value
+      activeEncounter.value = null // clear encounter on room change
     }
     currentRoomId.value = roomId
     const wasNew = !visitedRooms.value.has(roomId)
@@ -183,6 +224,25 @@ export const useGameStore = defineStore('game', () => {
     const ambientEvent = rollAmbientEvent(roomId)
     if (ambientEvent) {
       log(ambientEvent, 'narrative')
+    }
+
+    // Random encounter (cleared rooms only, no active enemies)
+    const hasEnemies = !!(room.enemies && room.enemies.length > 0 && !clearedRooms.value.has(roomId))
+    const combatStoreRef = useCombatStore()
+    if (clearedRooms.value.has(roomId) && shouldTriggerEncounter(0.18, combatStoreRef.inCombat, hasEnemies)) {
+      const enc = selectEncounter(encounterPool, seenEncounters.value)
+      if (enc) {
+        seenEncounters.value.add(enc.id)
+        const playerStore = usePlayerStore()
+        if (playerStore.player) {
+          const result = resolveEncounter(enc, playerStore.player.abilities)
+          pushLogs(result.logs)
+          applyEncounterRewards(result)
+          if (result.activeEncounter) {
+            activeEncounter.value = result.activeEncounter
+          }
+        }
+      }
     }
 
     // NPCs
@@ -219,7 +279,7 @@ export const useGameStore = defineStore('game', () => {
         if (playerStore.player.hp <= 0) {
           playerStore.player.hp = 0
           log('You have fallen in the darkness of Moria...', 'narrative')
-          phase.value = 'game-over'
+          checkDeath()
           return
         }
       }
@@ -251,7 +311,7 @@ export const useGameStore = defineStore('game', () => {
 
     log(`> ${input}`, 'system')
 
-    if (!playerStore.isAlive) {
+    if (phase.value === 'game-over' || !playerStore.isAlive) {
       log('You are dead. The darkness claims you.', 'error')
       return
     }
@@ -707,7 +767,7 @@ export const useGameStore = defineStore('game', () => {
       if (playerStore.player.hp <= 0) {
         playerStore.player.hp = 0
         log('You have fallen in the darkness of Moria...', 'narrative')
-        phase.value = 'game-over'
+        checkDeath()
       }
     }
   }
@@ -794,7 +854,7 @@ export const useGameStore = defineStore('game', () => {
         if (playerStore.player.hp <= 0) {
           playerStore.player.hp = 0
           log('You have fallen in the darkness of Moria...', 'narrative')
-          phase.value = 'game-over'
+          checkDeath()
         }
       }
     } else {
@@ -814,7 +874,7 @@ export const useGameStore = defineStore('game', () => {
         if (playerStore.player.hp <= 0) {
           playerStore.player.hp = 0
           log('You have fallen in the darkness of Moria...', 'narrative')
-          phase.value = 'game-over'
+          checkDeath()
           return
         }
       }
@@ -885,6 +945,42 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function handleTrade(cmd: ParsedCommand) {
+    // Intercept merchant encounter
+    if (activeEncounter.value?.type === 'merchant' && activeEncounter.value.offers) {
+      const playerStore = usePlayerStore()
+      if (!playerStore.player) return
+      const enc = activeEncounter.value
+
+      if (!cmd.target) {
+        // List offers
+        const result = listMerchantOffers(
+          encounterPool.find(e => e.id === enc.encounterId)?.name ?? 'Merchant',
+          enc.offers!,
+          (id) => itemDb[id],
+        )
+        pushLogs(result.logs)
+        return
+      }
+
+      // Buy item
+      const result = buyFromMerchant(
+        encounterPool.find(e => e.id === enc.encounterId)?.name ?? 'Merchant',
+        enc.offers!,
+        cmd.target,
+        playerStore.player.gold,
+        (id) => itemDb[id],
+      )
+      pushLogs(result.logs)
+      if (result.success && result.itemId && result.cost !== undefined) {
+        const item = itemDb[result.itemId]
+        if (item) {
+          playerStore.player.gold -= result.cost
+          pushLogs(playerStore.addItem(item))
+        }
+      }
+      return
+    }
+
     const npc = findNPCInRoom()
     if (!npc) { log('There is no one here to trade with.', 'error'); return }
 
@@ -926,6 +1022,20 @@ export const useGameStore = defineStore('game', () => {
 
   function handleSay(cmd: ParsedCommand) {
     if (!cmd.target) { log('Say what?', 'error'); return }
+
+    // Intercept riddle encounter
+    if (activeEncounter.value?.type === 'riddle') {
+      const enc = encounterPool.find(e => e.id === activeEncounter.value!.encounterId) as RiddleEncounter | undefined
+      if (enc) {
+        const result = answerRiddle(enc, cmd.target)
+        pushLogs(result.logs)
+        if (result.correct) {
+          applyEncounterRewards(result)
+          activeEncounter.value = null
+        }
+        return
+      }
+    }
 
     const puzzle = findPuzzleInRoom()
     if (puzzle && puzzle.type === 'keyword') {
@@ -1138,6 +1248,8 @@ export const useGameStore = defineStore('game', () => {
     difficulty,
     roomLookCounts,
     recruitableNPCsOffered,
+    seenEncounters,
+    activeEncounter,
     getDifficultyMultipliers,
     initGame,
     handleCommand,
