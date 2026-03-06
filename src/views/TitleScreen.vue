@@ -29,18 +29,18 @@ function startGame() {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center bg-moria-bg px-4">
+  <div class="min-h-[100dvh] flex flex-col items-center justify-center bg-moria-bg px-4 py-8">
     <div class="text-center max-w-lg">
-      <h1 class="text-5xl font-bold text-moria-highlight mb-2 tracking-wider">MINES OF MORIA</h1>
-      <div class="text-moria-border text-sm mb-8 tracking-widest">A DUNGEON OF MIDDLE-EARTH</div>
+      <h1 class="text-3xl sm:text-5xl font-bold text-moria-highlight mb-2 tracking-wider">MINES OF MORIA</h1>
+      <div class="text-moria-border text-xs sm:text-sm mb-6 sm:mb-8 tracking-widest">A DUNGEON OF MIDDLE-EARTH</div>
 
-      <div class="text-moria-text/70 text-sm leading-relaxed mb-10 italic">
+      <div class="text-moria-text/70 text-xs sm:text-sm leading-relaxed mb-6 sm:mb-10 italic">
         "The Dwarves dug too greedily and too deep. You know what they awoke in the darkness of Khazad-dum...
         shadow and flame."
       </div>
 
-      <div class="border border-moria-border p-6 rounded bg-moria-panel/30 mb-8">
-        <pre class="text-moria-highlight/60 text-xs font-mono leading-tight">
+      <div class="border border-moria-border p-4 sm:p-6 rounded bg-moria-panel/30 mb-6 sm:mb-8">
+        <pre class="text-moria-highlight/60 text-[10px] sm:text-xs font-mono leading-tight">
      ___________
     /           \
    /  SPEAK     \
@@ -58,9 +58,9 @@ function startGame() {
         <button
           v-if="showContinue"
           @click="continueGame"
-          class="px-8 py-3 bg-moria-highlight text-moria-bg font-bold text-lg rounded
+          class="w-full sm:w-auto px-8 py-3 bg-moria-highlight text-moria-bg font-bold text-base sm:text-lg rounded
                  hover:bg-moria-highlight/80 transition-colors cursor-pointer
-                 tracking-wider"
+                 tracking-wider min-h-[48px]"
         >
           CONTINUE
         </button>
@@ -70,9 +70,9 @@ function startGame() {
 
         <button
           @click="startGame"
-          class="px-8 py-3 bg-moria-border text-moria-highlight font-bold text-lg rounded
+          class="w-full sm:w-auto px-8 py-3 bg-moria-border text-moria-highlight font-bold text-base sm:text-lg rounded
                  hover:bg-moria-highlight hover:text-moria-bg transition-colors cursor-pointer
-                 tracking-wider"
+                 tracking-wider min-h-[48px]"
         >
           ENTER MORIA
         </button>

@@ -99,55 +99,50 @@ function toggleMobileTab(tab: MobileTab) {
 </script>
 
 <template>
-  <div class="h-screen flex flex-col bg-moria-bg" :class="screenEffect">
+  <div class="h-[100dvh] flex flex-col bg-moria-bg" :class="screenEffect">
     <!-- Header -->
-    <header class="flex flex-wrap items-center justify-between px-4 py-2 gap-1 border-b border-moria-border bg-moria-panel/50">
-      <h1 class="text-lg font-bold text-moria-highlight tracking-wider">MINES OF MORIA</h1>
-      <div v-if="playerStore.player" class="flex items-center gap-3">
+    <header class="flex items-center px-3 py-1.5 md:px-4 md:py-2 gap-2 border-b border-moria-border bg-moria-panel/50 shrink-0">
+      <h1 class="text-sm md:text-lg font-bold text-moria-highlight tracking-wider whitespace-nowrap">MORIA</h1>
+      <div v-if="playerStore.player" class="flex items-center gap-1.5 flex-1 min-w-0">
+        <span class="text-moria-info text-[10px] md:text-xs">HP</span>
+        <div class="flex-1 max-w-32 h-2 bg-moria-bg rounded overflow-hidden">
+          <div :class="hpBarColor" class="h-full transition-all duration-300" :style="{ width: hpPercent + '%' }"></div>
+        </div>
+        <span class="text-moria-text text-[10px] md:text-xs font-mono">{{ playerStore.player.hp }}/{{ playerStore.player.maxHp }}</span>
+      </div>
+      <div v-if="playerStore.player" class="flex items-center gap-1.5 shrink-0">
         <a
           href="https://github.com/mhelleborg/MyDungeon/issues/new"
           target="_blank"
           rel="noopener"
-          class="text-xs px-2 py-1 border border-moria-border text-moria-info rounded hover:text-moria-highlight hover:border-moria-highlight/50 transition-colors"
+          class="hidden sm:inline-block text-[10px] md:text-xs px-1.5 py-0.5 md:px-2 md:py-1 border border-moria-border text-moria-info rounded hover:text-moria-highlight hover:border-moria-highlight/50 transition-colors"
           title="Send feedback or ideas"
         >FEEDBACK</a>
         <button
           @click="toggleSound"
-          class="text-xs px-2 py-1 border rounded transition-colors cursor-pointer"
+          class="text-[10px] md:text-xs px-1.5 py-0.5 md:px-2 md:py-1 border rounded transition-colors cursor-pointer"
           :class="soundOn
             ? 'border-moria-highlight/50 text-moria-highlight'
             : 'border-moria-border text-moria-info'"
           :title="soundOn ? 'Sound On' : 'Sound Off'"
         >{{ soundOn ? 'SND' : 'MUTE' }}</button>
       </div>
-      <div v-if="playerStore.player" class="flex items-center gap-2">
-        <span class="text-moria-info text-xs">HP</span>
-        <div class="w-24 sm:w-32 h-2 bg-moria-bg rounded overflow-hidden">
-          <div :class="hpBarColor" class="h-full transition-all duration-300" :style="{ width: hpPercent + '%' }"></div>
-        </div>
-        <span class="text-moria-text text-xs font-mono hidden sm:inline">{{ playerStore.player.hp }}/{{ playerStore.player.maxHp }}</span>
-      </div>
     </header>
 
     <!-- Main content -->
-    <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
       <!-- Left column: room + controls + log -->
-      <div class="flex-1 flex flex-col p-2 md:p-3 gap-2 md:gap-3 min-w-0">
+      <div class="flex-1 flex flex-col p-2 md:p-3 gap-1.5 md:gap-3 min-w-0 overflow-y-auto">
         <RoomDescription />
 
         <!-- Encounter hint -->
-        <div v-if="gameStore.activeEncounter" class="px-3 py-2 text-sm border rounded border-moria-highlight/40 bg-moria-highlight/10 text-moria-highlight">
-          <template v-if="gameStore.activeEncounter.type === 'riddle'">A riddle awaits your answer... (type "say &lt;answer&gt;")</template>
-          <template v-else-if="gameStore.activeEncounter.type === 'merchant'">A merchant is nearby... (type "trade" to see wares)</template>
+        <div v-if="gameStore.activeEncounter" class="px-2 py-1.5 md:px-3 md:py-2 text-xs md:text-sm border rounded border-moria-highlight/40 bg-moria-highlight/10 text-moria-highlight shrink-0">
+          <template v-if="gameStore.activeEncounter.type === 'riddle'">A riddle awaits... (type "say &lt;answer&gt;")</template>
+          <template v-else-if="gameStore.activeEncounter.type === 'merchant'">A merchant is nearby... (type "trade")</template>
         </div>
 
         <ActionBar />
-
-        <div class="flex gap-3">
-          <DirectionControls />
-          <div class="flex-1"></div>
-        </div>
-
+        <DirectionControls />
         <CombatLog />
       </div>
 
@@ -159,20 +154,20 @@ function toggleMobileTab(tab: MobileTab) {
       </div>
     </div>
 
-    <!-- Mobile tab bar + panels -->
-    <div class="md:hidden border-t border-moria-border">
+    <!-- Mobile tab bar + drawer -->
+    <div class="md:hidden border-t border-moria-border shrink-0">
       <div class="flex">
         <button
           v-for="tab in (['stats', 'inv', 'map'] as const)"
           :key="tab"
           @click="toggleMobileTab(tab)"
-          class="flex-1 px-3 py-2 text-xs font-bold text-center transition-colors cursor-pointer"
+          class="flex-1 py-2 text-[11px] font-bold text-center transition-colors cursor-pointer"
           :class="mobileTab === tab
             ? 'bg-moria-highlight/20 text-moria-highlight border-b-2 border-moria-highlight'
             : 'text-moria-info hover:text-moria-text'"
         >{{ tab === 'stats' ? 'STATS' : tab === 'inv' ? 'INV' : 'MAP' }}</button>
       </div>
-      <div v-if="mobileTab" class="max-h-48 overflow-y-auto p-2">
+      <div v-if="mobileTab" class="max-h-[40vh] overflow-y-auto p-2 bg-moria-panel/80 border-t border-moria-border/50">
         <PlayerStats v-if="mobileTab === 'stats'" />
         <InventoryPanel v-if="mobileTab === 'inv'" />
         <MiniMap v-if="mobileTab === 'map'" />
@@ -180,7 +175,7 @@ function toggleMobileTab(tab: MobileTab) {
     </div>
 
     <!-- Command input (sticky at bottom) -->
-    <div class="p-2 md:px-3 md:pb-3 border-t md:border-t-0 border-moria-border">
+    <div class="p-1.5 md:px-3 md:pb-3 border-t border-moria-border shrink-0">
       <CommandInput />
     </div>
 
@@ -197,15 +192,15 @@ function toggleMobileTab(tab: MobileTab) {
     <AchievementToast />
 
     <!-- Game Over overlay -->
-    <div v-if="gameStore.phase === 'game-over'" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 overflow-y-auto">
-      <div class="text-center p-8 max-w-md w-full">
-        <h2 class="text-4xl font-bold text-moria-danger mb-4">YOU HAVE FALLEN</h2>
-        <p class="text-moria-text mb-6">The darkness of Moria claims another soul...</p>
+    <div v-if="gameStore.phase === 'game-over'" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 overflow-y-auto p-4">
+      <div class="text-center p-6 sm:p-8 max-w-md w-full">
+        <h2 class="text-2xl sm:text-4xl font-bold text-moria-danger mb-3 sm:mb-4">YOU HAVE FALLEN</h2>
+        <p class="text-moria-text text-sm sm:text-base mb-4 sm:mb-6">The darkness of Moria claims another soul...</p>
 
         <!-- Run Stats -->
-        <div class="bg-moria-panel/50 border border-moria-border rounded p-4 mb-6 text-left">
-          <h3 class="text-moria-highlight font-bold text-sm mb-2 text-center">RUN STATS</h3>
-          <div class="grid grid-cols-2 gap-1 text-xs font-mono">
+        <div class="bg-moria-panel/50 border border-moria-border rounded p-3 sm:p-4 mb-4 sm:mb-6 text-left">
+          <h3 class="text-moria-highlight font-bold text-xs sm:text-sm mb-2 text-center">RUN STATS</h3>
+          <div class="grid grid-cols-2 gap-1 text-[11px] sm:text-xs font-mono">
             <span class="text-moria-info">Rooms explored</span>
             <span class="text-moria-text text-right">{{ statsStore.roomsExplored }} / {{ statsStore.totalRooms }}</span>
             <span class="text-moria-info">Enemies slain</span>
@@ -225,22 +220,22 @@ function toggleMobileTab(tab: MobileTab) {
 
         <button
           @click="gameStore.phase = 'title'"
-          class="px-6 py-2 bg-moria-border text-moria-highlight rounded hover:bg-moria-highlight hover:text-moria-bg cursor-pointer"
+          class="w-full sm:w-auto px-6 py-2.5 bg-moria-border text-moria-highlight rounded hover:bg-moria-highlight hover:text-moria-bg cursor-pointer min-h-[44px]"
         >TRY AGAIN</button>
       </div>
     </div>
 
     <!-- Victory overlay -->
-    <div v-if="gameStore.phase === 'victory'" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 overflow-y-auto">
-      <div class="text-center p-8 max-w-md w-full">
-        <h2 class="text-4xl font-bold text-moria-highlight mb-4">VICTORY!</h2>
-        <p class="text-moria-text mb-2">You have crossed the Mines of Moria!</p>
-        <p class="text-moria-info mb-4">The light of day greets you once more.</p>
+    <div v-if="gameStore.phase === 'victory'" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 overflow-y-auto p-4">
+      <div class="text-center p-6 sm:p-8 max-w-md w-full">
+        <h2 class="text-2xl sm:text-4xl font-bold text-moria-highlight mb-3 sm:mb-4">VICTORY!</h2>
+        <p class="text-moria-text text-sm sm:text-base mb-2">You have crossed the Mines of Moria!</p>
+        <p class="text-moria-info text-sm mb-3 sm:mb-4">The light of day greets you once more.</p>
 
         <!-- Run Stats -->
-        <div class="bg-moria-panel/50 border border-moria-border rounded p-4 mb-4 text-left">
-          <h3 class="text-moria-highlight font-bold text-sm mb-2 text-center">RUN STATS</h3>
-          <div class="grid grid-cols-2 gap-1 text-xs font-mono">
+        <div class="bg-moria-panel/50 border border-moria-border rounded p-3 sm:p-4 mb-3 sm:mb-4 text-left">
+          <h3 class="text-moria-highlight font-bold text-xs sm:text-sm mb-2 text-center">RUN STATS</h3>
+          <div class="grid grid-cols-2 gap-1 text-[11px] sm:text-xs font-mono">
             <span class="text-moria-info">Rooms explored</span>
             <span class="text-moria-text text-right">{{ statsStore.roomsExplored }} / {{ statsStore.totalRooms }}</span>
             <span class="text-moria-info">Enemies slain</span>
@@ -263,8 +258,8 @@ function toggleMobileTab(tab: MobileTab) {
         </div>
 
         <!-- New Achievements -->
-        <div v-if="statsStore.newlyUnlocked.length > 0" class="bg-moria-panel/50 border border-moria-highlight/50 rounded p-4 mb-4">
-          <h3 class="text-moria-highlight font-bold text-sm mb-2">NEW ACHIEVEMENTS</h3>
+        <div v-if="statsStore.newlyUnlocked.length > 0" class="bg-moria-panel/50 border border-moria-highlight/50 rounded p-3 sm:p-4 mb-3 sm:mb-4">
+          <h3 class="text-moria-highlight font-bold text-xs sm:text-sm mb-2">NEW ACHIEVEMENTS</h3>
           <div v-for="id in statsStore.newlyUnlocked" :key="id" class="flex items-center gap-2 text-left mb-1">
             <span class="text-moria-highlight font-bold text-xs w-5 text-center">{{ statsStore.allAchievements.find(a => a.id === id)?.icon }}</span>
             <div>
@@ -275,8 +270,8 @@ function toggleMobileTab(tab: MobileTab) {
         </div>
 
         <!-- All Achievements -->
-        <div class="bg-moria-panel/50 border border-moria-border rounded p-4 mb-6">
-          <h3 class="text-moria-highlight font-bold text-sm mb-2">ACHIEVEMENTS ({{ statsStore.allAchievements.filter(a => a.unlocked).length }}/{{ statsStore.allAchievements.length }})</h3>
+        <div class="bg-moria-panel/50 border border-moria-border rounded p-3 sm:p-4 mb-4 sm:mb-6">
+          <h3 class="text-moria-highlight font-bold text-xs sm:text-sm mb-2">ACHIEVEMENTS ({{ statsStore.allAchievements.filter(a => a.unlocked).length }}/{{ statsStore.allAchievements.length }})</h3>
           <div class="grid grid-cols-2 gap-1 text-left">
             <div v-for="a in statsStore.allAchievements" :key="a.id" class="flex items-center gap-1" :class="a.unlocked ? '' : 'opacity-40'">
               <span class="text-xs font-bold w-4 text-center" :class="a.unlocked ? 'text-moria-highlight' : 'text-moria-border'">{{ a.icon }}</span>
@@ -287,7 +282,7 @@ function toggleMobileTab(tab: MobileTab) {
 
         <button
           @click="gameStore.phase = 'title'"
-          class="px-6 py-2 bg-moria-border text-moria-highlight rounded hover:bg-moria-highlight hover:text-moria-bg cursor-pointer"
+          class="w-full sm:w-auto px-6 py-2.5 bg-moria-border text-moria-highlight rounded hover:bg-moria-highlight hover:text-moria-bg cursor-pointer min-h-[44px]"
         >PLAY AGAIN</button>
       </div>
     </div>

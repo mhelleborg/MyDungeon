@@ -40,8 +40,8 @@ defineExpose({ focus: () => inputEl.value?.focus() })
 </script>
 
 <template>
-  <div class="flex items-center gap-2 p-2 border border-moria-border rounded bg-moria-panel/50">
-    <span class="text-moria-highlight font-mono">&gt;</span>
+  <div class="flex items-center gap-2 px-2 py-1.5 md:p-2 border border-moria-border rounded bg-moria-panel/50">
+    <span class="text-moria-highlight font-mono text-sm md:text-base">&gt;</span>
     <input
       ref="inputEl"
       v-model="input"
@@ -50,7 +50,7 @@ defineExpose({ focus: () => inputEl.value?.focus() })
       type="text"
       placeholder="Enter command..."
       data-command-input
-      class="flex-1 bg-transparent text-moria-text font-mono text-base md:text-sm outline-none placeholder-moria-border"
+      class="flex-1 bg-transparent text-moria-text font-mono text-sm md:text-sm outline-none placeholder-moria-border"
       autofocus
     />
   </div>

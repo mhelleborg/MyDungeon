@@ -81,7 +81,7 @@ function itemActionLabel(item: { id: string; name: string; type: string }) {
 </script>
 
 <template>
-  <div v-if="player && gameStore.phase === 'playing'" class="flex flex-wrap gap-2 px-1">
+  <div v-if="player && gameStore.phase === 'playing'" class="flex flex-wrap gap-1.5 md:gap-2 px-1 shrink-0">
     <!-- Combat Mode -->
     <template v-if="inCombat">
       <!-- Attack buttons -->
@@ -89,7 +89,7 @@ function itemActionLabel(item: { id: string; name: string; type: string }) {
         v-for="enemy in combatStore.livingEnemies"
         :key="enemy.instanceId"
         @click="cmd(`attack ${enemy.name}`)"
-        class="px-3 py-2 md:px-2 md:py-1 text-xs rounded border border-moria-danger/60 bg-moria-danger/15 text-red-400 hover:bg-moria-danger/30 cursor-pointer transition-colors"
+        class="px-2.5 py-1.5 md:px-2 md:py-1 text-[11px] md:text-xs rounded border border-moria-danger/60 bg-moria-danger/15 text-red-400 hover:bg-moria-danger/30 cursor-pointer transition-colors"
       >Attack {{ enemy.name }}</button>
 
       <!-- Spell buttons -->
@@ -98,7 +98,7 @@ function itemActionLabel(item: { id: string; name: string; type: string }) {
         :key="spell.id"
         :disabled="spell.currentCooldown > 0"
         @click="cmd(`cast ${spell.name}`)"
-        class="px-3 py-2 md:px-2 md:py-1 text-xs rounded border transition-colors"
+        class="px-2.5 py-1.5 md:px-2 md:py-1 text-[11px] md:text-xs rounded border transition-colors"
         :class="spell.currentCooldown > 0
           ? 'border-moria-border/40 bg-moria-panel/30 text-moria-border cursor-not-allowed'
           : 'border-moria-info/60 bg-moria-info/15 text-moria-info hover:bg-moria-info/30 cursor-pointer'"
@@ -112,7 +112,7 @@ function itemActionLabel(item: { id: string; name: string; type: string }) {
         v-for="item in usableItems"
         :key="item.id"
         @click="cmd(`use ${item.name}`)"
-        class="px-3 py-2 md:px-2 md:py-1 text-xs rounded border border-amber-500/60 bg-amber-500/15 text-amber-400 hover:bg-amber-500/30 cursor-pointer transition-colors"
+        class="px-2.5 py-1.5 md:px-2 md:py-1 text-[11px] md:text-xs rounded border border-amber-500/60 bg-amber-500/15 text-amber-400 hover:bg-amber-500/30 cursor-pointer transition-colors"
       >Use {{ item.name }}<span v-if="item.count > 1" class="opacity-60 ml-1">x{{ item.count }}</span></button>
     </template>
 
@@ -123,7 +123,7 @@ function itemActionLabel(item: { id: string; name: string; type: string }) {
         v-for="item in groundItems"
         :key="item.id"
         @click="cmd(`take ${item.name}`)"
-        class="px-3 py-2 md:px-2 md:py-1 text-xs rounded border border-amber-500/60 bg-amber-500/15 text-amber-400 hover:bg-amber-500/30 cursor-pointer transition-colors"
+        class="px-2.5 py-1.5 md:px-2 md:py-1 text-[11px] md:text-xs rounded border border-amber-500/60 bg-amber-500/15 text-amber-400 hover:bg-amber-500/30 cursor-pointer transition-colors"
       >Take {{ item.name }}<span v-if="item.count > 1" class="opacity-60 ml-1">x{{ item.count }}</span></button>
 
       <!-- Usable/equippable inventory items -->
@@ -131,22 +131,22 @@ function itemActionLabel(item: { id: string; name: string; type: string }) {
         v-for="item in usableItems"
         :key="item.id"
         @click="cmd(itemAction(item))"
-        class="px-3 py-2 md:px-2 md:py-1 text-xs rounded border border-moria-info/60 bg-moria-info/15 text-moria-info hover:bg-moria-info/30 cursor-pointer transition-colors"
+        class="px-2.5 py-1.5 md:px-2 md:py-1 text-[11px] md:text-xs rounded border border-moria-info/60 bg-moria-info/15 text-moria-info hover:bg-moria-info/30 cursor-pointer transition-colors"
       >{{ itemActionLabel(item) }} {{ item.name }}<span v-if="item.count > 1" class="opacity-60 ml-1">x{{ item.count }}</span></button>
 
       <!-- Room actions -->
       <button
         @click="cmd('look')"
-        class="px-3 py-2 md:px-2 md:py-1 text-xs rounded border border-moria-border/60 bg-moria-panel/30 text-moria-text hover:bg-moria-border/30 cursor-pointer transition-colors"
-      >Look Around</button>
+        class="px-2.5 py-1.5 md:px-2 md:py-1 text-[11px] md:text-xs rounded border border-moria-border/60 bg-moria-panel/30 text-moria-text hover:bg-moria-border/30 cursor-pointer transition-colors"
+      >Look</button>
       <button
         @click="cmd('inventory')"
-        class="px-3 py-2 md:px-2 md:py-1 text-xs rounded border border-moria-border/60 bg-moria-panel/30 text-moria-text hover:bg-moria-border/30 cursor-pointer transition-colors"
-      >Check Inventory</button>
+        class="px-2.5 py-1.5 md:px-2 md:py-1 text-[11px] md:text-xs rounded border border-moria-border/60 bg-moria-panel/30 text-moria-text hover:bg-moria-border/30 cursor-pointer transition-colors"
+      >Inventory</button>
       <button
         @click="cmd('stats')"
-        class="px-3 py-2 md:px-2 md:py-1 text-xs rounded border border-moria-border/60 bg-moria-panel/30 text-moria-text hover:bg-moria-border/30 cursor-pointer transition-colors"
-      >Character Stats</button>
+        class="px-2.5 py-1.5 md:px-2 md:py-1 text-[11px] md:text-xs rounded border border-moria-border/60 bg-moria-panel/30 text-moria-text hover:bg-moria-border/30 cursor-pointer transition-colors"
+      >Stats</button>
     </template>
   </div>
 </template>

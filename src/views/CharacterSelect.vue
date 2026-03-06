@@ -54,51 +54,51 @@ function startAdventure() {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center bg-moria-bg px-4">
+  <div class="min-h-[100dvh] flex flex-col items-center bg-moria-bg px-4 py-6 sm:justify-center overflow-y-auto">
     <div class="max-w-xl w-full">
-      <h2 class="text-3xl font-bold text-moria-highlight mb-6 text-center tracking-wider">CHOOSE YOUR PATH</h2>
+      <h2 class="text-2xl sm:text-3xl font-bold text-moria-highlight mb-4 sm:mb-6 text-center tracking-wider">CHOOSE YOUR PATH</h2>
 
       <!-- Name input -->
-      <div class="mb-6">
+      <div class="mb-4 sm:mb-6">
         <label class="text-moria-info text-xs block mb-1">YOUR NAME</label>
         <input
           v-model="name"
           type="text"
           placeholder="Enter your name..."
-          class="w-full px-4 py-2 bg-moria-panel border border-moria-border rounded text-moria-text font-mono outline-none
+          class="w-full px-4 py-2.5 bg-moria-panel border border-moria-border rounded text-moria-text font-mono outline-none
                  focus:border-moria-highlight placeholder-moria-border"
         />
       </div>
 
       <!-- Class selection -->
-      <div class="space-y-3 mb-8">
+      <div class="space-y-2 sm:space-y-3 mb-6 sm:mb-8">
         <button
           v-for="cls in classes"
           :key="cls.id"
           @click="selectedClass = cls.id"
-          class="w-full text-left p-4 border rounded transition-colors cursor-pointer"
+          class="w-full text-left p-3 sm:p-4 border rounded transition-colors cursor-pointer"
           :class="selectedClass === cls.id
             ? 'border-moria-highlight bg-moria-highlight/10'
             : 'border-moria-border bg-moria-panel/30 hover:border-moria-border/80'"
         >
           <div class="flex items-baseline gap-2 mb-1">
-            <span class="text-moria-highlight font-bold">{{ cls.label }}</span>
+            <span class="text-moria-highlight font-bold text-sm sm:text-base">{{ cls.label }}</span>
             <span class="text-moria-info text-xs">({{ cls.subtitle }})</span>
           </div>
-          <p class="text-moria-text text-sm mb-1">{{ cls.desc }}</p>
-          <p class="text-moria-info text-xs font-mono">{{ cls.stats }}</p>
+          <p class="text-moria-text text-xs sm:text-sm mb-1">{{ cls.desc }}</p>
+          <p class="text-moria-info text-[10px] sm:text-xs font-mono">{{ cls.stats }}</p>
         </button>
       </div>
 
       <!-- Difficulty selection -->
-      <div class="mb-8">
+      <div class="mb-6 sm:mb-8">
         <label class="text-moria-info text-xs block mb-2">DIFFICULTY</label>
         <div class="flex flex-col sm:flex-row gap-2">
           <button
             v-for="diff in difficulties"
             :key="diff.id"
             @click="selectedDifficulty = diff.id"
-            class="flex-1 p-3 border rounded transition-colors cursor-pointer text-center"
+            class="flex-1 p-2.5 sm:p-3 border rounded transition-colors cursor-pointer text-center"
             :class="selectedDifficulty === diff.id
               ? 'border-moria-highlight bg-moria-highlight/10'
               : 'border-moria-border bg-moria-panel/30 hover:border-moria-border/80'"
@@ -111,8 +111,8 @@ function startAdventure() {
 
       <button
         @click="startAdventure"
-        class="w-full px-6 py-3 bg-moria-border text-moria-highlight font-bold text-lg rounded
-               hover:bg-moria-highlight hover:text-moria-bg transition-colors cursor-pointer tracking-wider"
+        class="w-full px-6 py-3 bg-moria-border text-moria-highlight font-bold text-base sm:text-lg rounded
+               hover:bg-moria-highlight hover:text-moria-bg transition-colors cursor-pointer tracking-wider min-h-[48px]"
       >
         BEGIN JOURNEY
       </button>

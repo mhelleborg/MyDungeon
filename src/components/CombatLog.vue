@@ -48,12 +48,12 @@ const filters: { id: LogFilter; label: string }[] = [
 <template>
   <div class="flex flex-col flex-1 min-h-0">
     <!-- Filter buttons -->
-    <div class="flex gap-1 mb-1">
+    <div class="flex gap-1 mb-1 shrink-0">
       <button
         v-for="f in filters"
         :key="f.id"
         @click="activeFilter = f.id"
-        class="px-3 py-1.5 md:px-2 md:py-0.5 text-xs rounded transition-colors cursor-pointer"
+        class="px-2 py-1 md:px-2 md:py-0.5 text-[10px] md:text-xs rounded transition-colors cursor-pointer"
         :class="activeFilter === f.id
           ? 'bg-moria-highlight/20 text-moria-highlight border border-moria-highlight/50'
           : 'text-moria-info border border-moria-border hover:border-moria-info'"
@@ -61,7 +61,7 @@ const filters: { id: LogFilter; label: string }[] = [
     </div>
 
     <!-- Log entries -->
-    <div ref="logEl" class="flex-1 overflow-y-auto p-3 border border-moria-border rounded bg-moria-bg/80 font-mono text-xs leading-relaxed space-y-0.5 max-h-[30vh] md:max-h-none">
+    <div ref="logEl" class="flex-1 overflow-y-auto p-2 md:p-3 border border-moria-border rounded bg-moria-bg/80 font-mono text-[11px] md:text-xs leading-relaxed space-y-0.5 min-h-[60px] md:min-h-0">
       <div v-for="(entry, i) in filteredLog" :key="i" :class="typeColor[entry.type] || 'text-moria-text'">
         {{ entry.text }}
       </div>
