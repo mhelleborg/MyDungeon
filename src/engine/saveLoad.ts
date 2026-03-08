@@ -150,7 +150,7 @@ export function deserialize(data: SaveData): void {
 
   // Re-splice recruited companions out of roomNPCs
   for (const comp of data.companions) {
-    for (const [roomId, npcIds] of Object.entries(roomNPCs)) {
+    for (const [, npcIds] of Object.entries(roomNPCs)) {
       const idx = npcIds.indexOf(comp.id)
       if (idx !== -1) {
         npcIds.splice(idx, 1)

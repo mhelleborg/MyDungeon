@@ -17,12 +17,10 @@ import { roomInteractions, trapDestroyText } from '../data/roomInteractions'
 import { examineInteraction, resolveSearch } from '../engine/handlers/interactHandler'
 import { npcs, roomNPCs } from '../data/npcs'
 import { puzzles, roomPuzzles } from '../data/puzzles'
-import type { DifficultyLevel } from '../types/difficulty'
-import { difficultySettings } from '../types/difficulty'
 import { playSound } from '../engine/audio'
-import type { Companion } from '../types/companion'
 import { checkRecruitment, rollCompanionComment } from '../engine/handlers/companionHandler'
-import { saveGame, loadGame, deleteSave } from '../engine/saveLoad'
+import { difficulty, currentRoomId, roomItems, companions, getDifficultyMultipliers, dropItemToGround } from './gameContext'
+import { SAVE_KEY } from '../types/save'
 import { encounters as encounterPool } from '../data/encounters'
 import {
   shouldTriggerEncounter,
@@ -43,12 +41,10 @@ export type GamePhase = 'title' | 'character-select' | 'playing' | 'game-over' |
 export const useGameStore = defineStore('game', () => {
   // ── State ──────────────────────────────────────────────────
   const phase = ref<GamePhase>('title')
-  const difficulty = ref<DifficultyLevel>('normal')
-  const currentRoomId = ref(STARTING_ROOM)
+  // difficulty, currentRoomId, roomItems, companions → imported from gameContext
   const gameLog = ref<GameLogEntry[]>([])
   const visitedRooms = ref<Set<string>>(new Set())
   const clearedRooms = ref<Set<string>>(new Set())
-  const roomItems = ref<Record<string, string[]>>({})
   const disarmedTraps = ref<Set<string>>(new Set())
   const hasLight = ref(false)
   const lightTurnsRemaining = ref(0)
@@ -61,7 +57,6 @@ export const useGameStore = defineStore('game', () => {
   const destroyedTraps = ref<Set<string>>(new Set())
   const searchedInteractions = ref<Set<string>>(new Set())
   const roomLookCounts = ref<Record<string, number>>({})
-  const companions = ref<Companion[]>([])
   const recruitableNPCsOffered = ref<Set<string>>(new Set())
   const seenEncounters = ref<Set<string>>(new Set())
   const activeEncounter = ref<ActiveEncounter | null>(null)
@@ -88,10 +83,6 @@ export const useGameStore = defineStore('game', () => {
     return !!room?.dark && !hasLight.value
   }
 
-  function getDifficultyMultipliers() {
-    return difficultySettings[difficulty.value]
-  }
-
   function applyLightState(state: LightState) {
     hasLight.value = state.hasLight
     lightTurnsRemaining.value = state.turnsRemaining
@@ -104,7 +95,7 @@ export const useGameStore = defineStore('game', () => {
       const combatStore = useCombatStore()
       if (combatStore.inCombat) combatStore.endCombat()
       playSound('death')
-      deleteSave()
+      localStorage.removeItem(SAVE_KEY)
       phase.value = 'game-over'
       return true
     }
@@ -124,8 +115,7 @@ export const useGameStore = defineStore('game', () => {
     }
     if (result.itemIds) {
       for (const itemId of result.itemIds) {
-        if (!roomItems.value[currentRoomId.value]) roomItems.value[currentRoomId.value] = []
-        roomItems.value[currentRoomId.value]!.push(itemId)
+        dropItemToGround(itemId)
       }
     }
   }
@@ -299,7 +289,7 @@ export const useGameStore = defineStore('game', () => {
       log('You emerge from the darkness into blinding sunlight. The Mines of Moria lie behind you.', 'narrative')
       log('You have survived the crossing of Moria!', 'system')
       useStatsStore().checkEndOfRun()
-      deleteSave()
+      localStorage.removeItem(SAVE_KEY)
       phase.value = 'victory'
     }
   }
@@ -615,8 +605,7 @@ export const useGameStore = defineStore('game', () => {
     )
     if (!item) { log(`You don't have any "${cmd.target}".`, 'error'); return }
     playerStore.removeItem(item.id)
-    if (!roomItems.value[currentRoomId.value]) roomItems.value[currentRoomId.value] = []
-    roomItems.value[currentRoomId.value]!.push(item.id)
+    dropItemToGround(item.id)
     log(`You drop the ${item.name}.`, 'info')
   }
 
@@ -713,8 +702,7 @@ export const useGameStore = defineStore('game', () => {
 
     if (result.success && result.rewardItems) {
       for (const itemId of result.rewardItems) {
-        if (!roomItems.value[currentRoomId.value]) roomItems.value[currentRoomId.value] = []
-        roomItems.value[currentRoomId.value]!.push(itemId)
+        dropItemToGround(itemId)
       }
     }
   }
@@ -1109,8 +1097,7 @@ export const useGameStore = defineStore('game', () => {
         const item = itemDb[itemId]
         if (item) {
           // Add to room ground items
-          if (!roomItems.value[currentRoomId.value]) roomItems.value[currentRoomId.value] = []
-          roomItems.value[currentRoomId.value]!.push(itemId)
+          dropItemToGround(itemId)
         }
       }
     }
@@ -1155,19 +1142,23 @@ export const useGameStore = defineStore('game', () => {
 
   // ── Save / Load ──────────────────────────────────────────
   function handleSave() {
-    if (saveGame()) {
-      log('Game saved.', 'system')
-    } else {
-      log('Failed to save game.', 'error')
-    }
+    import('../engine/saveLoad').then(({ saveGame }) => {
+      if (saveGame()) {
+        log('Game saved.', 'system')
+      } else {
+        log('Failed to save game.', 'error')
+      }
+    })
   }
 
   function handleLoad() {
-    if (loadGame()) {
-      log('Game loaded.', 'system')
-    } else {
-      log('No save file found or save is corrupted.', 'error')
-    }
+    import('../engine/saveLoad').then(({ loadGame }) => {
+      if (loadGame()) {
+        log('Game loaded.', 'system')
+      } else {
+        log('No save file found or save is corrupted.', 'error')
+      }
+    })
   }
 
   // ── Info commands ──────────────────────────────────────────

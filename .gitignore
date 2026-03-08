@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Stale TS build artifacts (noEmit is set, but guard against accidental emit)
+src/**/*.js
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

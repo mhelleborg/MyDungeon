@@ -11,8 +11,8 @@ import { checkPhaseTransition, rollFireDamage, resolveBreakBridge, type BossPhas
 import { companionAttack, companionTakeDamage } from '../engine/handlers/companionHandler'
 import { playSound } from '../engine/audio'
 import { usePlayerStore } from './playerStore'
-import { useGameStore } from './gameStore'
 import { useStatsStore } from './statsStore'
+import { getDifficultyMultipliers, companions, dropItemToGround } from './gameContext'
 
 export const useCombatStore = defineStore('combat', () => {
   const inCombat = ref(false)
@@ -35,8 +35,7 @@ export const useCombatStore = defineStore('combat', () => {
     bossPhase.value = 0
     bossFallBack.value = false
 
-    const gameStore = useGameStore()
-    const multipliers = gameStore.getDifficultyMultipliers()
+    const multipliers = getDifficultyMultipliers()
 
     for (const re of roomEnemies) {
       const template = enemyDb[re.enemyId]
@@ -68,8 +67,7 @@ export const useCombatStore = defineStore('combat', () => {
       logs.push({ text: `Enemies appear: ${names}!`, type: 'combat', timestamp: Date.now() })
     }
     // Companion readiness
-    const gameStore2 = useGameStore()
-    for (const comp of gameStore2.companions) {
+    for (const comp of companions.value) {
       if (comp.hp > 0) {
         logs.push({ text: `${comp.name} readies their weapon at your side!`, type: 'combat', timestamp: Date.now() })
       }
@@ -153,13 +151,9 @@ export const useCombatStore = defineStore('combat', () => {
 
       // Loot drops to the ground
       if (target.lootTable) {
-        const gameStore = useGameStore()
         const loot = rollLoot(target.lootTable)
         for (const item of loot) {
-          if (!gameStore.roomItems[gameStore.currentRoomId]) {
-            gameStore.roomItems[gameStore.currentRoomId] = []
-          }
-          gameStore.roomItems[gameStore.currentRoomId]!.push(item.id)
+          dropItemToGround(item.id)
           logs.push({ text: `${target.name} dropped ${item.name}.`, type: 'loot', timestamp: Date.now() })
         }
       }
@@ -251,12 +245,11 @@ export const useCombatStore = defineStore('combat', () => {
   }
 
   function doCompanionTurns(): GameLogEntry[] {
-    const gameStore = useGameStore()
     const logs: GameLogEntry[] = []
     const statsStore = useStatsStore()
     const playerStore = usePlayerStore()
 
-    for (const comp of gameStore.companions) {
+    for (const comp of companions.value) {
       if (comp.hp <= 0) continue
       const target = livingEnemies.value[Math.floor(Math.random() * livingEnemies.value.length)]
       if (!target) break
@@ -273,10 +266,7 @@ export const useCombatStore = defineStore('combat', () => {
         if (target.lootTable) {
           const loot = rollLoot(target.lootTable)
           for (const item of loot) {
-            if (!gameStore.roomItems[gameStore.currentRoomId]) {
-              gameStore.roomItems[gameStore.currentRoomId] = []
-            }
-            gameStore.roomItems[gameStore.currentRoomId]!.push(item.id)
+            dropItemToGround(item.id)
             logs.push({ text: `${target.name} dropped ${item.name}.`, type: 'loot', timestamp: Date.now() })
           }
         }
@@ -289,9 +279,8 @@ export const useCombatStore = defineStore('combat', () => {
     const playerStore = usePlayerStore()
     if (!playerStore.player) return []
 
-    const gameStore = useGameStore()
-    const dmgMult = gameStore.getDifficultyMultipliers().enemyDamage
-    const livingCompanions = gameStore.companions.filter(c => c.hp > 0)
+    const dmgMult = getDifficultyMultipliers().enemyDamage
+    const livingCompanions = companions.value.filter(c => c.hp > 0)
 
     const statsStore = useStatsStore()
     const logs: GameLogEntry[] = []
@@ -396,13 +385,9 @@ export const useCombatStore = defineStore('combat', () => {
         const xpLogs = playerStore.addXp(balrog.xpReward)
         logs.push(...xpLogs)
 
-        const gameStore = useGameStore()
         const loot = rollLoot(balrog.lootTable || [])
         for (const item of loot) {
-          if (!gameStore.roomItems[gameStore.currentRoomId]) {
-            gameStore.roomItems[gameStore.currentRoomId] = []
-          }
-          gameStore.roomItems[gameStore.currentRoomId]!.push(item.id)
+          dropItemToGround(item.id)
           logs.push({ text: `${balrog.name} dropped ${item.name}.`, type: 'loot', timestamp: Date.now() })
         }
 

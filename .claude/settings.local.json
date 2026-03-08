@@ -14,7 +14,10 @@
       "Bash(npm test:*)",
       "Bash(npx vitest:*)",
       "Bash(npx vite:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(node_modules/.bin/vue-tsc -b)",
+      "Bash(node_modules/.bin/vite build)",
+      "Bash(npm ci)"
     ]
   }
 }

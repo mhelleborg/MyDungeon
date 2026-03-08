@@ -42,7 +42,7 @@ describe('death handling', () => {
 
   describe('checkDeath', () => {
     it('sets phase to game-over when player HP is 0', () => {
-      const playerStore = setupPlayer(0)
+      setupPlayer(0)
       const gameStore = useGameStore()
       gameStore.phase = 'playing'
 
@@ -146,7 +146,7 @@ describe('death handling', () => {
 
   describe('initGame resets combat state', () => {
     it('ends stale combat from previous game', () => {
-      const playerStore = setupPlayer(20)
+      setupPlayer(20)
       const gameStore = useGameStore()
       const combatStore = useCombatStore()
 

@@ -5,7 +5,7 @@ import { usePlayerStore } from '../stores/playerStore'
 import { useCombatStore } from '../stores/combatStore'
 import { useStatsStore } from '../stores/statsStore'
 import { serialize, deserialize, hasSaveGame, deleteSave, saveGame, loadGame } from '../engine/saveLoad'
-import { SAVE_KEY, SAVE_VERSION } from '../types/save'
+import { SAVE_KEY } from '../types/save'
 
 // Mock localStorage
 const localStorageMock = (() => {
