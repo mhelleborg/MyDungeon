@@ -126,5 +126,7 @@ export function createPlayer(name: string, playerClass: PlayerClass): Player {
     equippedArmor: template.equippedArmor,
     spells: template.spells.map(spell => ({ ...spell })),
     gold: 10,
+    statusEffects: [],
+    fumblePenalty: false,
   }
 }

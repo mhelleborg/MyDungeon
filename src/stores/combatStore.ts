@@ -13,6 +13,8 @@ import { playSound } from '../engine/audio'
 import { usePlayerStore } from './playerStore'
 import { useStatsStore } from './statsStore'
 import { getDifficultyMultipliers, companions, dropItemToGround } from './gameContext'
+import { tickStatusEffects, cleanupExpiredEffects, getStatusAttackBonus, getStatusAcBonus, applyStatusEffect } from '../engine/statusEffects'
+import { rollPlayerCritical, rollPlayerFumble, rollEnemyCritical, rollEnemyFumble } from '../engine/criticalEffects'
 
 export const useCombatStore = defineStore('combat', () => {
   const inCombat = ref(false)
@@ -104,11 +106,74 @@ export const useCombatStore = defineStore('combat', () => {
     }
   }
 
+  function processPlayerStatusEffects(logs: GameLogEntry[]): boolean {
+    const playerStore = usePlayerStore()
+    if (!playerStore.player) return false
+
+    // Tick status effects (DoT, stun check)
+    const effectResult = tickStatusEffects(playerStore.player.statusEffects)
+    logs.push(...effectResult.logs)
+    if (effectResult.damage > 0) {
+      playerStore.player.hp -= effectResult.damage
+      useStatsStore().recordDamageTaken(effectResult.damage)
+      if (playerStore.player.hp <= 0) {
+        playerStore.player.hp = 0
+        logs.push({ text: 'You have fallen in the darkness of Moria...', type: 'narrative', timestamp: Date.now() })
+        return true // player died
+      }
+    }
+
+    // Clean up expired effects
+    const cleanup = cleanupExpiredEffects(playerStore.player.statusEffects)
+    logs.push(...cleanup.logs)
+    playerStore.player.statusEffects = cleanup.remaining
+
+    return effectResult.stunned
+  }
+
   function doPlayerAttack(targetName?: string): GameLogEntry[] {
     const playerStore = usePlayerStore()
     if (!playerStore.player || !inCombat.value) return []
 
     const logs: GameLogEntry[] = []
+
+    // Check fumble penalty from last turn
+    if (playerStore.player.fumblePenalty) {
+      playerStore.player.fumblePenalty = false
+      logs.push({ text: 'You recover your balance from last turn\'s fumble!', type: 'combat', timestamp: Date.now() })
+      // Skip to enemy turns
+      logs.push(...doCompanionTurns())
+      if (livingEnemies.value.length === 0) {
+        logs.push({ text: 'All enemies defeated! The way is clear.', type: 'combat', timestamp: Date.now() })
+        endCombat()
+        return logs
+      }
+      processBossPhase(logs)
+      if (!playerStore.isAlive) return logs
+      logs.push(...doEnemyTurns())
+      turnCount.value++
+      tickCooldowns(playerStore.player)
+      return logs
+    }
+
+    // Process status effects at start of turn
+    const stunned = processPlayerStatusEffects(logs)
+    if (!playerStore.isAlive) return logs
+    if (stunned) {
+      // Skip player action, go to companion/enemy turns
+      logs.push(...doCompanionTurns())
+      if (livingEnemies.value.length === 0) {
+        logs.push({ text: 'All enemies defeated! The way is clear.', type: 'combat', timestamp: Date.now() })
+        endCombat()
+        return logs
+      }
+      processBossPhase(logs)
+      if (!playerStore.isAlive) return logs
+      logs.push(...doEnemyTurns())
+      turnCount.value++
+      tickCooldowns(playerStore.player)
+      return logs
+    }
 
     // Find target
     let target: CombatEnemy | undefined
@@ -125,10 +190,11 @@ export const useCombatStore = defineStore('combat', () => {
       return logs
     }
 
-    // Get weapon info
+    // Get weapon info with status effect bonuses
     const weapon = playerStore.getEquippedWeapon()
     const weaponDamage = weapon?.damage || '1d4+0'
-    const attackBonus = weapon?.attackBonus || 0
+    const statusBonus = getStatusAttackBonus(playerStore.player.statusEffects)
+    const attackBonus = (weapon?.attackBonus || 0) + statusBonus
 
     // Player attacks
     const result = playerAttack(playerStore.player, target, weaponDamage, attackBonus)
@@ -136,6 +202,35 @@ export const useCombatStore = defineStore('combat', () => {
 
     const statsStore = useStatsStore()
     lastCritical.value = result.hit && result.critical
+
+    // Critical hit bonus effects
+    if (result.hit && result.critical) {
+      const critEffect = rollPlayerCritical()
+      logs.push(...critEffect.logs)
+      if (critEffect.bonusDamage > 0) {
+        target.hp -= critEffect.bonusDamage
+        statsStore.recordDamageDealt(critEffect.bonusDamage)
+        logs.push({ text: `(+${critEffect.bonusDamage} bonus damage!)`, type: 'combat', timestamp: Date.now() })
+      }
+      if (critEffect.statusEffect === 'stunned' && target.hp > 0) {
+        logs.push({ text: `${target.name} is dazed by the blow!`, type: 'combat', timestamp: Date.now() })
+        // Enemy stun — skip their next attack (handled via reduced enemy turn)
+      }
+    }
+
+    // Fumble effects on natural 1
+    if (!result.hit && result.roll === 1) {
+      const fumble = rollPlayerFumble()
+      logs.push(...fumble.logs)
+      if (fumble.selfDamage > 0) {
+        playerStore.player.hp -= fumble.selfDamage
+        statsStore.recordDamageTaken(fumble.selfDamage)
+      }
+      if (fumble.loseNextTurn) {
+        playerStore.player.fumblePenalty = true
+      }
+    }
+
     if (result.hit) {
       statsStore.recordDamageDealt(result.damage)
       playSound(result.critical ? 'crit' : 'hit')
@@ -281,6 +376,8 @@ export const useCombatStore = defineStore('combat', () => {
 
     const dmgMult = getDifficultyMultipliers().enemyDamage
     const livingCompanions = companions.value.filter(c => c.hp > 0)
+    // AC bonus from status effects (e.g. blessed)
+    const statusAcBonus = getStatusAcBonus(playerStore.player.statusEffects)
 
     const statsStore = useStatsStore()
     const logs: GameLogEntry[] = []
@@ -305,12 +402,22 @@ export const useCombatStore = defineStore('combat', () => {
             if (idx !== -1) livingCompanions.splice(idx, 1)
           }
         } else {
-          logs.push({ text: `${enemy.name} attacks ${target.name} but misses.`, type: 'combat', timestamp: Date.now() })
+          // Enemy fumble on nat 1
+          if (roll === 1) {
+            const fumble = rollEnemyFumble()
+            logs.push(...fumble.logs)
+          } else {
+            logs.push({ text: `${enemy.name} attacks ${target.name} but misses.`, type: 'combat', timestamp: Date.now() })
+          }
         }
         continue
       }
 
+      // Temporarily apply status AC bonus
+      const originalAc = playerStore.player.ac
+      playerStore.player.ac += statusAcBonus
       const result = enemyAttack(enemy, playerStore.player, darkCombat.value)
+      playerStore.player.ac = originalAc
 
       // Apply difficulty scaling to damage
       if (dmgMult !== 1.0 && result.hit) {
@@ -329,7 +436,50 @@ export const useCombatStore = defineStore('combat', () => {
         result.damage = reduced
       }
 
-      if (result.hit) statsStore.recordDamageTaken(result.damage)
+      if (result.hit) {
+        statsStore.recordDamageTaken(result.damage)
+
+        // Enemy critical hit bonus effects
+        if (result.critical) {
+          const critEffect = rollEnemyCritical()
+          logs.push(...critEffect.logs)
+          if (critEffect.bonusDamage > 0) {
+            playerStore.player.hp -= critEffect.bonusDamage
+            statsStore.recordDamageTaken(critEffect.bonusDamage)
+          }
+          if (critEffect.statusEffect) {
+            const applied = applyStatusEffect(playerStore.player.statusEffects, critEffect.statusEffect)
+            playerStore.player.statusEffects = applied.effects
+            logs.push(...applied.logs)
+          }
+        }
+
+        // Orc captains can poison (20% chance on hit)
+        if ((enemy.id === 'orc-captain' || enemy.id === 'orc-berserker') && Math.random() < 0.2) {
+          const applied = applyStatusEffect(playerStore.player.statusEffects, 'poisoned')
+          playerStore.player.statusEffects = applied.effects
+          logs.push(...applied.logs)
+        }
+
+        // Balrog inflicts burning (30% chance on hit)
+        if (enemy.id === 'balrog' && Math.random() < 0.3) {
+          const applied = applyStatusEffect(playerStore.player.statusEffects, 'burning')
+          playerStore.player.statusEffects = applied.effects
+          logs.push(...applied.logs)
+        }
+
+        // Cave troll can stun (15% chance on hit)
+        if (enemy.id === 'cave-troll' && Math.random() < 0.15) {
+          const applied = applyStatusEffect(playerStore.player.statusEffects, 'stunned')
+          playerStore.player.statusEffects = applied.effects
+          logs.push(...applied.logs)
+        }
+      } else if (result.roll === 1) {
+        // Enemy fumble on nat 1
+        const fumble = rollEnemyFumble()
+        logs.push(...fumble.logs)
+      }
+
       logs.push(...result.logs)
       if (playerStore.player.hp <= 0) break
     }
@@ -413,6 +563,13 @@ export const useCombatStore = defineStore('combat', () => {
     combatEnemies.value = []
     bossPhase.value = 0
     bossFallBack.value = false
+
+    // Clear combat-only status effects (keep blessed)
+    const playerStore = usePlayerStore()
+    if (playerStore.player) {
+      playerStore.player.statusEffects = playerStore.player.statusEffects.filter(e => e.id === 'blessed')
+      playerStore.player.fumblePenalty = false
+    }
   }
 
   return {

@@ -11,6 +11,7 @@ const combatStore = useCombatStore()
 
 const player = computed(() => playerStore.player)
 const inCombat = computed(() => combatStore.inCombat)
+const atForge = computed(() => gameStore.currentRoomId === 'abandoned-forge' && !inCombat.value)
 
 interface ActionItem {
   id: string
@@ -133,6 +134,13 @@ function itemActionLabel(item: { id: string; name: string; type: string }) {
         @click="cmd(itemAction(item))"
         class="px-2.5 py-1.5 md:px-2 md:py-1 text-[11px] md:text-xs rounded border border-moria-info/60 bg-moria-info/15 text-moria-info hover:bg-moria-info/30 cursor-pointer transition-colors"
       >{{ itemActionLabel(item) }} {{ item.name }}<span v-if="item.count > 1" class="opacity-60 ml-1">x{{ item.count }}</span></button>
+
+      <!-- Forge crafting -->
+      <button
+        v-if="atForge"
+        @click="cmd('craft')"
+        class="px-2.5 py-1.5 md:px-2 md:py-1 text-[11px] md:text-xs rounded border border-orange-500/60 bg-orange-500/15 text-orange-400 hover:bg-orange-500/30 cursor-pointer transition-colors"
+      >Forge Item</button>
 
       <!-- Room actions -->
       <button

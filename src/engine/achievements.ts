@@ -24,6 +24,7 @@ export interface RunStats {
   playerClass: PlayerClass
   difficulty: DifficultyLevel
   balrogSlain: boolean
+  itemsCrafted: number
 }
 
 export const achievements: Record<string, Achievement> = {
@@ -87,6 +88,12 @@ export const achievements: Record<string, Achievement> = {
     description: 'Kill 3 or fewer enemies (excluding the Balrog).',
     icon: 'X',
   },
+  'forge-master': {
+    id: 'forge-master',
+    name: 'Forge Master',
+    description: 'Craft an item at the Abandoned Forge.',
+    icon: 'F',
+  },
 }
 
 const TOTAL_PUZZLES = 5 // speak-friend, forge-levers, gargoyle-riddle, stair-descent, records-ward
@@ -117,6 +124,10 @@ export function checkMidRunAchievements(stats: RunStats, foundItems: string[]): 
 
   if (stats.puzzlesSolved >= TOTAL_PUZZLES) {
     earned.push('puzzle-master')
+  }
+
+  if (stats.itemsCrafted >= 1) {
+    earned.push('forge-master')
   }
 
   return earned

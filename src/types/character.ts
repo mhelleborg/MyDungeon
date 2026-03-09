@@ -34,6 +34,8 @@ export interface Player {
   equippedArmor?: string    // item ID
   spells: Spell[]
   gold: number
+  statusEffects: import('../types/statusEffect').StatusEffect[]
+  fumblePenalty: boolean     // true if player fumbled and loses next action
 }
 
 export interface Enemy {

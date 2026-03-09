@@ -66,6 +66,20 @@ const classLabel: Record<string, string> = {
       <div><span class="text-moria-info">CHA</span> <span class="text-moria-text">{{ player.abilities.cha }}</span> <span class="text-moria-highlight">({{ formatMod(player.abilities.cha) }})</span></div>
     </div>
 
+    <!-- Status Effects -->
+    <div v-if="player.statusEffects && player.statusEffects.length > 0">
+      <div class="text-moria-info text-xs font-bold mb-1">STATUS</div>
+      <div v-for="effect in player.statusEffects" :key="effect.id" class="text-xs">
+        <span :class="{
+          'text-green-400': effect.id === 'blessed',
+          'text-purple-400': effect.id === 'poisoned',
+          'text-orange-400': effect.id === 'burning',
+          'text-yellow-400': effect.id === 'stunned',
+        }">{{ effect.name }}</span>
+        <span class="text-moria-text ml-1">({{ effect.duration }} turns)</span>
+      </div>
+    </div>
+
     <!-- Spells -->
     <div v-if="player.spells.length > 0">
       <div class="text-moria-info text-xs font-bold mb-1">SPELLS</div>

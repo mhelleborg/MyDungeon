@@ -25,6 +25,7 @@ export const useStatsStore = defineStore('stats', () => {
   const difficulty = ref<DifficultyLevel>('normal')
   const balrogSlain = ref(false)
   const foundItems = ref<string[]>([])
+  const itemsCrafted = ref(0)
 
   // ── Persistent achievements ──────────────────────────────
   const unlockedAchievements = ref<Set<string>>(loadAchievements())
@@ -71,6 +72,7 @@ export const useStatsStore = defineStore('stats', () => {
     difficulty.value = diff
     balrogSlain.value = false
     foundItems.value = []
+    itemsCrafted.value = 0
     newlyUnlocked.value = []
   }
 
@@ -89,6 +91,7 @@ export const useStatsStore = defineStore('stats', () => {
   function recordSneakSuccess() { sneakSuccesses.value++ }
   function recordFleeAttempt() { fleeAttempts.value++ }
   function recordBalrogSlain() { balrogSlain.value = true }
+  function recordItemCrafted() { itemsCrafted.value++ }
 
   function dismissToast(id: string) {
     toastQueue.value = toastQueue.value.filter(t => t.id !== id)
@@ -111,6 +114,7 @@ export const useStatsStore = defineStore('stats', () => {
       playerClass: playerClass.value,
       difficulty: difficulty.value,
       balrogSlain: balrogSlain.value,
+      itemsCrafted: itemsCrafted.value,
     }
   }
 
@@ -188,6 +192,7 @@ export const useStatsStore = defineStore('stats', () => {
     recordSneakSuccess,
     recordFleeAttempt,
     recordBalrogSlain,
+    recordItemCrafted,
     checkEndOfRun,
   }
 })
