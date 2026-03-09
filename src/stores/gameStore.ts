@@ -35,6 +35,8 @@ import type { RiddleEncounter } from '../types/encounter'
 import { usePlayerStore } from './playerStore'
 import { useCombatStore } from './combatStore'
 import { useStatsStore } from './statsStore'
+import { listRecipes, tryCraft, craftedItems } from '../engine/crafting'
+import { applyStatusEffect } from '../engine/statusEffects'
 
 export type GamePhase = 'title' | 'character-select' | 'playing' | 'game-over' | 'victory'
 
@@ -284,6 +286,17 @@ export const useGameStore = defineStore('game', () => {
     // Mid-run achievements
     useStatsStore().checkMidRunAchievements()
 
+    // Hidden Shrine grants Durin's Blessing
+    if (roomId === 'hidden-shrine') {
+      const playerStore = usePlayerStore()
+      if (playerStore.player) {
+        const blessed = applyStatusEffect(playerStore.player.statusEffects, 'blessed')
+        playerStore.player.statusEffects = blessed.effects
+        log('The statue of Durin glows warmly. You feel a surge of ancient strength flow through you.', 'narrative')
+        pushLogs(blessed.logs)
+      }
+    }
+
     // Victory
     if (roomId === 'east-gate') {
       log('You emerge from the darkness into blinding sunlight. The Mines of Moria lie behind you.', 'narrative')
@@ -326,6 +339,7 @@ export const useGameStore = defineStore('game', () => {
       case 'trade':   handleTrade(cmd); break
       case 'say':     handleSay(cmd); break
       case 'solve':   handleSolve(cmd); break
+      case 'craft':   handleCraft(cmd); break
       case 'inventory': handleInventory(); break
       case 'stats':   handleStats(); break
       case 'help':    handleHelp(); break
@@ -1140,6 +1154,54 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  // ── Craft ────────────────────────────────────────────────
+  function handleCraft(cmd: ParsedCommand) {
+    const combatStore = useCombatStore()
+    if (combatStore.inCombat) { log('You can\'t craft while in combat!', 'error'); return }
+
+    if (currentRoomId.value !== 'abandoned-forge') {
+      log('You need to be at the Abandoned Forge to craft items. The ancient anvils and hearths are there.', 'error')
+      return
+    }
+
+    const playerStore = usePlayerStore()
+    if (!playerStore.player) return
+
+    // No target = list recipes
+    if (!cmd.target) {
+      const result = listRecipes(playerStore.inventory, playerStore.player.gold)
+      pushLogs(result.logs)
+      return
+    }
+
+    // Attempt to craft
+    const result = tryCraft(cmd.target, playerStore.inventory, playerStore.player.gold)
+    pushLogs(result.logs)
+
+    if (result.success && result.recipe && result.resultItem) {
+      // Remove ingredients
+      for (const ingredientId of result.recipe.ingredients) {
+        playerStore.removeItem(ingredientId)
+      }
+      // Deduct gold
+      if (result.recipe.goldCost > 0) {
+        playerStore.player.gold -= result.recipe.goldCost
+      }
+      // Add crafted item
+      const item = craftedItems[result.resultItem.id] || result.resultItem
+      pushLogs(playerStore.addItem(item))
+
+      // Auto-equip if it's a weapon or armor better than current
+      if (item.type === 'weapon' || item.type === 'armor') {
+        pushLogs(playerStore.equipItem(item.id))
+      }
+
+      useStatsStore().recordItemCrafted()
+      useStatsStore().checkMidRunAchievements()
+      playSound('levelup')
+    }
+  }
+
   // ── Save / Load ──────────────────────────────────────────
   function handleSave() {
     import('../engine/saveLoad').then(({ saveGame }) => {
@@ -1182,6 +1244,10 @@ export const useGameStore = defineStore('game', () => {
     log(`HP: ${p.hp}/${p.maxHp}  AC: ${p.ac}  XP: ${p.xp}/${p.xpToNext}`, 'info')
     log(`STR ${p.abilities.str}  DEX ${p.abilities.dex}  CON ${p.abilities.con}`, 'info')
     log(`INT ${p.abilities.int}  WIS ${p.abilities.wis}  CHA ${p.abilities.cha}`, 'info')
+    if (p.statusEffects.length > 0) {
+      const effects = p.statusEffects.map(e => `${e.name} (${e.duration} turns)`).join(', ')
+      log(`Effects: ${effects}`, 'info')
+    }
   }
 
   function handleHelp() {
@@ -1203,6 +1269,7 @@ export const useGameStore = defineStore('game', () => {
     log('say <word> - Speak a word aloud (for puzzles)', 'info')
     log('solve/pull <answer> - Attempt to solve a puzzle', 'info')
     log('search <target> - Search an object for loot', 'info')
+    log('craft [recipe] - Forge items at the Abandoned Forge', 'info')
     log('destroy - Destroy a disarmed trap', 'info')
     log('disarm - Attempt to disarm a trap', 'info')
     log('inventory - View your items', 'info')

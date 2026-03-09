@@ -194,6 +194,27 @@ export const items: Record<string, Item> = {
   },
 }
 
+// Crafted items (created at the forge)
+items['reforged-blade'] = {
+  id: 'reforged-blade',
+  name: 'Reforged Dwarven Blade',
+  description: 'An orcish blade reforged on the ancient anvils of Khazad-dum. Dwarven craft has transformed crude iron into keen steel.',
+  type: 'weapon',
+  damage: '1d8+3',
+  attackBonus: 2,
+  value: 35,
+}
+
+items['glamdring-awakened'] = {
+  id: 'glamdring-awakened',
+  name: 'Glamdring, Flame of the West',
+  description: 'The forge of Khazad-dum has rekindled Glamdring\'s ancient fire. The blade blazes with white light, and orcs flee before it.',
+  type: 'weapon',
+  damage: '2d8+4',
+  attackBonus: 4,
+  value: 400,
+}
+
 export function getItem(id: string): Item | undefined {
   return items[id]
 }

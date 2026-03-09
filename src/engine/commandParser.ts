@@ -105,6 +105,11 @@ export function parseCommand(input: string): ParsedCommand {
     return { type: 'search', target: rest || undefined, raw }
   }
 
+  // Craft
+  if (verb === 'craft' || verb === 'forge') {
+    return { type: 'craft', target: rest || undefined, raw }
+  }
+
   // Destroy
   if (verb === 'destroy' || verb === 'smash' || verb === 'break') {
     return { type: 'destroy', target: rest || undefined, raw }
