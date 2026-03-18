@@ -63,92 +63,123 @@ function startGame() {
           <div class="rune-sweep absolute inset-0 rounded-lg pointer-events-none" aria-hidden="true"></div>
           <svg
             class="moria-gate-svg select-none relative z-10 w-full"
-            viewBox="0 0 280 215"
+            viewBox="0 0 280 185"
             xmlns="http://www.w3.org/2000/svg"
-            aria-label="The Doors of Moria — Speak Friend and Enter"
+            aria-label="Gandalf stands before the West-gate of Moria"
           >
-            <!-- 7 stars of Durin above the arch -->
-            <circle cx="70"  cy="52" r="1.8" fill="rgba(212,168,67,0.75)" class="arch-star arch-star-1"/>
-            <circle cx="92"  cy="33" r="1.8" fill="rgba(212,168,67,0.75)" class="arch-star arch-star-2"/>
-            <circle cx="116" cy="22" r="1.8" fill="rgba(212,168,67,0.75)" class="arch-star arch-star-3"/>
-            <circle cx="140" cy="17" r="2.2" fill="rgba(212,168,67,0.75)" class="arch-star arch-star-4"/>
-            <circle cx="164" cy="22" r="1.8" fill="rgba(212,168,67,0.75)" class="arch-star arch-star-5"/>
-            <circle cx="188" cy="33" r="1.8" fill="rgba(212,168,67,0.75)" class="arch-star arch-star-6"/>
-            <circle cx="210" cy="52" r="1.8" fill="rgba(212,168,67,0.75)" class="arch-star arch-star-7"/>
+            <defs>
+              <linearGradient id="moria-sky-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="rgba(8,7,12,1)"/>
+                <stop offset="55%"  stop-color="rgba(12,10,8,1)"/>
+                <stop offset="100%" stop-color="rgba(6,5,4,1)"/>
+              </linearGradient>
+              <radialGradient id="moria-moon-halo" cx="50%" cy="50%" r="50%">
+                <stop offset="0%"   stop-color="rgba(220,210,180,0.18)"/>
+                <stop offset="60%"  stop-color="rgba(200,185,140,0.07)"/>
+                <stop offset="100%" stop-color="rgba(180,160,100,0)"/>
+              </radialGradient>
+              <radialGradient id="moria-gate-reflect" cx="50%" cy="50%" r="50%">
+                <stop offset="0%"   stop-color="rgba(212,168,67,0.09)"/>
+                <stop offset="100%" stop-color="rgba(212,168,67,0)"/>
+              </radialGradient>
+            </defs>
 
-            <!-- Stone arch (outer + inner) -->
-            <path d="M 26,92 Q 140,18 254,92" fill="none" stroke="rgba(212,168,67,0.5)"  stroke-width="1.5" class="gate-arch-line"/>
-            <path d="M 34,92 Q 140,28 246,92" fill="none" stroke="rgba(212,168,67,0.18)" stroke-width="0.8"/>
+            <!-- ── Layer 1: Sky ──────────────────────────────── -->
+            <rect x="0" y="0" width="280" height="185" fill="url(#moria-sky-grad)"/>
 
-            <!-- Door panel borders -->
-            <rect x="26"  y="92" width="112" height="106" fill="none" stroke="rgba(212,168,67,0.4)" stroke-width="1.2"/>
-            <rect x="142" y="92" width="112" height="106" fill="none" stroke="rgba(212,168,67,0.4)" stroke-width="1.2"/>
+            <!-- ── Layer 2: Stars ───────────────────────────── -->
+            <circle class="sky-star ss-1" cx="18"  cy="14" r="0.9" fill="rgba(220,210,190,0.8)"/>
+            <circle class="sky-star ss-2" cx="42"  cy="28" r="0.7" fill="rgba(212,200,175,0.7)"/>
+            <circle class="sky-star ss-3" cx="65"  cy="9"  r="1.0" fill="rgba(225,215,195,0.85)"/>
+            <circle class="sky-star ss-4" cx="88"  cy="38" r="0.7" fill="rgba(210,200,180,0.7)"/>
+            <circle class="sky-star ss-5" cx="122" cy="18" r="0.8" fill="rgba(220,210,185,0.75)"/>
+            <circle class="sky-star ss-6" cx="148" cy="8"  r="0.9" fill="rgba(218,208,182,0.8)"/>
+            <circle class="sky-star ss-7" cx="160" cy="34" r="0.7" fill="rgba(215,205,180,0.7)"/>
+            <circle class="sky-star ss-8" cx="178" cy="22" r="0.8" fill="rgba(220,212,188,0.75)"/>
 
-            <!-- Center door crack -->
-            <line x1="140" y1="92" x2="140" y2="198" stroke="rgba(212,168,67,0.2)" stroke-width="0.8" stroke-dasharray="3,4"/>
+            <!-- ── Layer 3: Moon ─────────────────────────────── -->
+            <circle class="moon-halo-circle" cx="238" cy="26" r="14" fill="url(#moria-moon-halo)"/>
+            <circle cx="238" cy="26" r="7"  fill="rgba(195,183,148,0.22)" stroke="rgba(210,195,155,0.12)" stroke-width="0.5"/>
+            <circle cx="242" cy="24" r="6"  fill="rgba(10,9,8,0.82)"/>
 
-            <!-- Base line -->
-            <line x1="26" y1="198" x2="254" y2="198" stroke="rgba(212,168,67,0.35)" stroke-width="1.2"/>
+            <!-- ── Layer 4: Far mountains ─────────────────────── -->
+            <polygon
+              points="0,90 18,72 35,82 52,58 68,74 82,48 98,65 114,52 130,68 145,55 158,70 172,45 185,62 198,50 212,68 228,54 242,72 258,60 272,78 280,68 280,185 0,185"
+              fill="rgba(20,16,12,0.85)"
+            />
 
-            <!-- Left gothic arched window -->
-            <path d="M 52,164 L 52,112 Q 84,96 116,112 L 116,164 Z" fill="none" stroke="rgba(212,168,67,0.35)" stroke-width="1"/>
-            <!-- Right gothic arched window -->
-            <path d="M 164,164 L 164,112 Q 196,96 228,112 L 228,164 Z" fill="none" stroke="rgba(212,168,67,0.35)" stroke-width="1"/>
+            <!-- ── Layer 5: Near mountain face (Moria cliff) ─── -->
+            <polygon
+              points="0,115 22,105 40,95 58,108 72,100 88,88 102,97 115,85 128,95 138,105 148,100 162,88 170,92 175,115 185,108 195,90 205,88 215,92 222,100 230,108 240,100 255,90 270,98 280,88 280,185 0,185"
+              fill="rgba(6,5,4,1)"
+            />
 
-            <!-- Left window corner stars -->
-            <circle cx="63"  cy="124" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-l1"/>
-            <circle cx="105" cy="124" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-l2"/>
-            <circle cx="63"  cy="154" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-l3"/>
-            <circle cx="105" cy="154" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-l4"/>
-            <!-- Right window corner stars -->
-            <circle cx="175" cy="124" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-r1"/>
-            <circle cx="217" cy="124" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-r2"/>
-            <circle cx="175" cy="154" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-r3"/>
-            <circle cx="217" cy="154" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-r4"/>
-
-            <!-- Left eye (@) — three concentric rings + pupil -->
-            <circle cx="84" cy="138" r="9"   fill="none" stroke="rgba(212,168,67,0.55)" stroke-width="1"   class="eye-outer eye-l"/>
-            <circle cx="84" cy="138" r="5.5" fill="none" stroke="rgba(212,168,67,0.5)"  stroke-width="0.8" class="eye-iris  eye-l-iris"/>
-            <circle cx="84" cy="138" r="2"   fill="rgba(212,168,67,0.75)"/>
-            <!-- Right eye (@) -->
-            <circle cx="196" cy="138" r="9"   fill="none" stroke="rgba(212,168,67,0.55)" stroke-width="1"   class="eye-outer eye-r"/>
-            <circle cx="196" cy="138" r="5.5" fill="none" stroke="rgba(212,168,67,0.5)"  stroke-width="0.8" class="eye-iris  eye-r-iris"/>
-            <circle cx="196" cy="138" r="2"   fill="rgba(212,168,67,0.75)"/>
-
-            <!-- Star of Fëanor — translates to arch-top center, rotates slowly -->
-            <g transform="translate(140, 65)">
-              <g class="durin-star-group">
-                <polygon
-                  points="0,-17 4.75,-8.23 14.72,-8.5 9.5,0 14.72,8.5 4.75,8.23 0,17 -4.75,8.23 -14.72,8.5 -9.5,0 -14.72,-8.5 -4.75,-8.23"
-                  fill="none"
-                  stroke="rgba(212,168,67,0.9)"
-                  stroke-width="1.2"
-                  stroke-linejoin="round"
-                />
-                <circle cx="0" cy="0" r="2.5" fill="rgba(212,168,67,0.95)"/>
-              </g>
+            <!-- ── Layer 6: West-gate arch ────────────────────── -->
+            <g class="gate-group">
+              <path
+                class="gate-arch-outer"
+                d="M 170,115 Q 200,60 230,115"
+                fill="none"
+                stroke="rgba(212,168,67,1)"
+                stroke-width="1.4"
+                stroke-opacity="0.3"
+                stroke-linecap="round"
+              />
+              <path
+                class="gate-arch-inner"
+                d="M 175,115 Q 200,66 225,115"
+                fill="none"
+                stroke="rgba(212,168,67,1)"
+                stroke-width="0.7"
+                stroke-opacity="0.14"
+                stroke-linecap="round"
+              />
+              <line
+                x1="200" y1="95" x2="200" y2="115"
+                stroke="rgba(212,168,67,0.18)"
+                stroke-width="0.7"
+                stroke-dasharray="2.5,3"
+              />
             </g>
 
-            <!-- Inscription -->
-            <text
-              x="140" y="186"
-              text-anchor="middle"
-              font-family="monospace"
-              font-size="8.5"
-              letter-spacing="1.5"
-              fill="rgba(212,168,67,0.65)"
-              class="gate-inscription-text"
-            >&#x2736; SPEAK FRIEND AND ENTER &#x2736;</text>
+            <!-- ── Layer 7: Gate reflection smear ────────────── -->
+            <ellipse cx="200" cy="148" rx="28" ry="5" fill="url(#moria-gate-reflect)"/>
 
-            <!-- Pillar stubs below frame -->
-            <g stroke="rgba(212,168,67,0.3)" stroke-width="3" stroke-linecap="round">
-              <line x1="55"  y1="199" x2="55"  y2="211"/>
-              <line x1="80"  y1="199" x2="80"  y2="211"/>
-              <line x1="105" y1="199" x2="105" y2="211"/>
-              <line x1="140" y1="199" x2="140" y2="211"/>
-              <line x1="175" y1="199" x2="175" y2="211"/>
-              <line x1="200" y1="199" x2="200" y2="211"/>
-              <line x1="225" y1="199" x2="225" y2="211"/>
+            <!-- ── Layer 8: Lake / Mirrormere ────────────────── -->
+            <rect x="0" y="140" width="280" height="30" fill="rgba(8,7,10,0.7)"/>
+            <line class="water-line wl-1" x1="0" y1="145" x2="280" y2="145"
+              stroke="rgba(180,150,60,0.10)" stroke-width="0.8"/>
+            <line class="water-line wl-2" x1="0" y1="152" x2="280" y2="152"
+              stroke="rgba(180,150,60,0.08)" stroke-width="0.6"/>
+            <line class="water-line wl-3" x1="0" y1="160" x2="280" y2="160"
+              stroke="rgba(180,150,60,0.07)" stroke-width="0.5"/>
+
+            <!-- ── Layer 9: Ground / shore ─────────────────────── -->
+            <rect x="0" y="170" width="280" height="15" fill="rgba(14,12,10,1)"/>
+
+            <!-- ── Layer 10: Light cone ────────────────────────── -->
+            <polygon
+              class="light-cone"
+              points="112,82 175,112 230,108"
+              fill="rgba(240,220,150,1)"
+              opacity="0"
+            />
+
+            <!-- ── Layer 11: Gandalf silhouette ───────────────── -->
+            <g class="gandalf-group">
+              <!-- Hat: tall pointed wizard hat -->
+              <polygon points="90,80 81,103 72,105 104,105 97,103" fill="rgba(6,5,4,1)"/>
+              <!-- Head oval -->
+              <ellipse cx="91" cy="108" rx="5" ry="6" fill="rgba(6,5,4,1)"/>
+              <!-- Beard -->
+              <polygon points="87,113 95,113 97,124 93,128 88,126 85,120" fill="rgba(6,5,4,1)"/>
+              <!-- Robes: wide trapezoid widening at hem -->
+              <polygon points="84,122 98,122 108,165 72,165" fill="rgba(6,5,4,1)"/>
+              <!-- Staff line -->
+              <line x1="96" y1="130" x2="112" y2="82"
+                    stroke="rgba(35,28,18,0.9)" stroke-width="1.2" stroke-linecap="round"/>
+              <!-- Staff orb — primary light source -->
+              <circle class="staff-orb" cx="112" cy="82" r="2.5" fill="rgba(255,252,230,0.95)"/>
             </g>
           </svg>
         </div>
@@ -335,72 +366,90 @@ function startGame() {
   margin: 0 auto;
 }
 
-/* Arch stars twinkle independently */
-@keyframes gate-star-twinkle {
-  0%, 100% { opacity: 0.3; }
-  50%       { opacity: 1;   filter: drop-shadow(0 0 4px rgba(212,168,67,0.9)); }
+/* Staff orb — white-gold breathing glow */
+@keyframes staff-orb-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px rgba(255,252,230,0.65))
+            drop-shadow(0 0 8px rgba(240,210,120,0.4));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgba(255,255,220,1))
+            drop-shadow(0 0 22px rgba(220,190,80,0.75))
+            drop-shadow(0 0 38px rgba(212,168,67,0.4));
+    transform: scale(1.25);
+  }
 }
-.arch-star      { animation: gate-star-twinkle 2.8s ease-in-out infinite; }
-.arch-star-1    { animation-duration: 2.9s; animation-delay: 0.0s; }
-.arch-star-2    { animation-duration: 2.3s; animation-delay: 0.7s; }
-.arch-star-3    { animation-duration: 3.1s; animation-delay: 1.3s; }
-.arch-star-4    { animation-duration: 2.6s; animation-delay: 0.4s; }
-.arch-star-5    { animation-duration: 2.0s; animation-delay: 1.0s; }
-.arch-star-6    { animation-duration: 3.4s; animation-delay: 1.6s; }
-.arch-star-7    { animation-duration: 2.7s; animation-delay: 0.2s; }
-
-/* Arch outline breathes */
-@keyframes gate-arch-pulse {
-  0%, 100% { opacity: 0.7; }
-  50%       { opacity: 1;   filter: drop-shadow(0 0 5px rgba(212,168,67,0.45)); }
-}
-.gate-arch-line { animation: gate-arch-pulse 6s ease-in-out infinite; }
-
-/* Star of Fëanor — slow rotation + glow */
-@keyframes durin-star-rotate {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-@keyframes durin-star-glow {
-  0%, 100% { filter: drop-shadow(0 0  5px rgba(212,168,67,0.45)) drop-shadow(0 0 14px rgba(212,168,67,0.2)); }
-  50%       { filter: drop-shadow(0 0 11px rgba(212,168,67,1))    drop-shadow(0 0 28px rgba(212,168,67,0.55)); }
-}
-.durin-star-group {
-  animation: durin-star-rotate 28s linear infinite,
-             durin-star-glow    4s ease-in-out infinite;
+.staff-orb {
+  animation: staff-orb-pulse 2.5s ease-in-out infinite;
   transform-box: fill-box;
   transform-origin: center;
 }
 
-/* Eyes glow — left and right on offset timers */
-@keyframes eye-glow {
-  0%, 100% { opacity: 0.65; }
-  50%       { opacity: 1;    filter: drop-shadow(0 0 6px rgba(212,168,67,0.7)); }
+/* Gate arch — brightens ~0.4s after staff pulse peaks */
+@keyframes gate-respond {
+  0%, 100% { stroke-opacity: 0.3; }
+  50% {
+    stroke-opacity: 0.85;
+    filter: drop-shadow(0 0 5px rgba(212,168,67,0.6));
+  }
 }
-.eye-outer, .eye-iris { animation: eye-glow 5s ease-in-out infinite; }
-.eye-r, .eye-r-iris   { animation-delay: 2.2s; }
+.gate-arch-outer { animation: gate-respond 2.5s ease-in-out 0.4s infinite; }
+.gate-arch-inner { animation: gate-respond 2.5s ease-in-out 0.5s infinite; }
 
-/* Window corner stars shimmer with staggered delays */
-@keyframes window-star-shimmer {
-  0%, 100% { opacity: 0.4; }
-  50%       { opacity: 1;   filter: drop-shadow(0 0 4px rgba(212,168,67,0.85)); }
+/* Light cone — faint triangular beam from staff tip to gate */
+@keyframes light-cone-pulse {
+  0%, 100% { opacity: 0;    }
+  50%       { opacity: 0.12; }
 }
-.window-star { animation: window-star-shimmer 3.5s ease-in-out infinite; }
-.ws-l1 { animation-delay: 0.00s; }
-.ws-l2 { animation-delay: 0.70s; }
-.ws-l3 { animation-delay: 1.40s; }
-.ws-l4 { animation-delay: 2.10s; }
-.ws-r1 { animation-delay: 0.35s; }
-.ws-r2 { animation-delay: 1.05s; }
-.ws-r3 { animation-delay: 1.75s; }
-.ws-r4 { animation-delay: 2.45s; }
+.light-cone { animation: light-cone-pulse 2.5s ease-in-out infinite; }
 
-/* Inscription glows on a slow pulse */
-@keyframes inscription-glow {
+/* Sky stars — staggered twinkle */
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.25; }
+  50%       { opacity: 1;   filter: drop-shadow(0 0 2px rgba(220,210,180,0.8)); }
+}
+.sky-star { animation: star-twinkle 2.8s ease-in-out infinite; }
+.ss-1 { animation-duration: 2.1s; animation-delay: 0.0s; }
+.ss-2 { animation-duration: 3.2s; animation-delay: 0.6s; }
+.ss-3 { animation-duration: 1.8s; animation-delay: 1.1s; }
+.ss-4 { animation-duration: 2.7s; animation-delay: 1.8s; }
+.ss-5 { animation-duration: 3.5s; animation-delay: 0.3s; }
+.ss-6 { animation-duration: 2.4s; animation-delay: 1.4s; }
+.ss-7 { animation-duration: 1.9s; animation-delay: 0.9s; }
+.ss-8 { animation-duration: 3.0s; animation-delay: 2.0s; }
+
+/* Moon halo — soft outer glow breathes */
+@keyframes moon-halo {
+  0%, 100% { opacity: 0.6;  transform: scale(1);    }
+  50%       { opacity: 1.0; transform: scale(1.28); }
+}
+.moon-halo-circle {
+  animation: moon-halo 7s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Water shimmer — 3 lake lines pulse in staggered waves */
+@keyframes water-shimmer {
   0%, 100% { opacity: 0.5; }
-  50%       { opacity: 0.9; filter: drop-shadow(0 0 6px rgba(212,168,67,0.5)); }
+  50%       { opacity: 1.0; }
 }
-.gate-inscription-text { animation: inscription-glow 8s ease-in-out 1s infinite; }
+.water-line { animation: water-shimmer 4s ease-in-out infinite; }
+.wl-1 { animation-delay: 0.0s; }
+.wl-2 { animation-delay: 1.3s; }
+.wl-3 { animation-delay: 2.6s; }
+
+/* Cloak drift — gentle ±1.5° sway around Gandalf's feet */
+@keyframes cloak-drift {
+  0%, 100% { transform: rotate(-1.5deg); }
+  50%       { transform: rotate(1.5deg);  }
+}
+.gandalf-group {
+  animation: cloak-drift 7s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
 
 /* ── Rune sweep ──────────────────────────────────────────── */
 @keyframes rune-sweep {
