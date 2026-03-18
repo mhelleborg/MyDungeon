@@ -56,31 +56,101 @@ function startGame() {
         </div>
       </div>
 
-      <!-- Doors of Durin ASCII art -->
+      <!-- Doors of Moria — bespoke SVG animation -->
       <div class="fade-in-item mb-7 relative" style="--delay: 0.45s">
-        <div class="border border-moria-highlight/20 rounded-lg bg-moria-panel/50 px-4 py-5 sm:px-8 sm:py-6 relative overflow-hidden door-panel">
+        <div class="border border-moria-highlight/20 rounded-lg bg-moria-panel/50 p-4 sm:p-5 relative overflow-hidden door-panel">
           <div class="door-inner-glow absolute inset-0 rounded-lg pointer-events-none"></div>
           <div class="rune-sweep absolute inset-0 rounded-lg pointer-events-none" aria-hidden="true"></div>
-          <pre class="text-moria-highlight/75 text-[9px] sm:text-[11px] font-mono leading-snug select-none relative z-10">        *       *       *
-     *     *   *   *     *
-   *                         *
+          <svg
+            class="moria-gate-svg select-none relative z-10 w-full"
+            viewBox="0 0 280 215"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-label="The Doors of Moria — Speak Friend and Enter"
+          >
+            <!-- 7 stars of Durin above the arch -->
+            <circle cx="70"  cy="52" r="1.8" fill="rgba(212,168,67,0.75)" class="arch-star arch-star-1"/>
+            <circle cx="92"  cy="33" r="1.8" fill="rgba(212,168,67,0.75)" class="arch-star arch-star-2"/>
+            <circle cx="116" cy="22" r="1.8" fill="rgba(212,168,67,0.75)" class="arch-star arch-star-3"/>
+            <circle cx="140" cy="17" r="2.2" fill="rgba(212,168,67,0.75)" class="arch-star arch-star-4"/>
+            <circle cx="164" cy="22" r="1.8" fill="rgba(212,168,67,0.75)" class="arch-star arch-star-5"/>
+            <circle cx="188" cy="33" r="1.8" fill="rgba(212,168,67,0.75)" class="arch-star arch-star-6"/>
+            <circle cx="210" cy="52" r="1.8" fill="rgba(212,168,67,0.75)" class="arch-star arch-star-7"/>
 
-    .========================.
-   /  *  *  *  *  *  *  *    \
-  / *                       * \
- |   .-----.       .-----.    |
- |   | * * |       | * * |    |
- |   |*   *|       |*   *|    |
- |   |* @ *|       |* @ *|    |
- |   |*   *|       |*   *|    |
- |   | * * |       | * * |    |
- |   '-----'       '-----'    |
- |                             |
- |  ~SPEAK FRIEND AND ENTER~  |
- |                             |
-  \___________________________/
-    ||   ||   ||   ||   ||
-    ||   ||   ||   ||   ||</pre>
+            <!-- Stone arch (outer + inner) -->
+            <path d="M 26,92 Q 140,18 254,92" fill="none" stroke="rgba(212,168,67,0.5)"  stroke-width="1.5" class="gate-arch-line"/>
+            <path d="M 34,92 Q 140,28 246,92" fill="none" stroke="rgba(212,168,67,0.18)" stroke-width="0.8"/>
+
+            <!-- Door panel borders -->
+            <rect x="26"  y="92" width="112" height="106" fill="none" stroke="rgba(212,168,67,0.4)" stroke-width="1.2"/>
+            <rect x="142" y="92" width="112" height="106" fill="none" stroke="rgba(212,168,67,0.4)" stroke-width="1.2"/>
+
+            <!-- Center door crack -->
+            <line x1="140" y1="92" x2="140" y2="198" stroke="rgba(212,168,67,0.2)" stroke-width="0.8" stroke-dasharray="3,4"/>
+
+            <!-- Base line -->
+            <line x1="26" y1="198" x2="254" y2="198" stroke="rgba(212,168,67,0.35)" stroke-width="1.2"/>
+
+            <!-- Left gothic arched window -->
+            <path d="M 52,164 L 52,112 Q 84,96 116,112 L 116,164 Z" fill="none" stroke="rgba(212,168,67,0.35)" stroke-width="1"/>
+            <!-- Right gothic arched window -->
+            <path d="M 164,164 L 164,112 Q 196,96 228,112 L 228,164 Z" fill="none" stroke="rgba(212,168,67,0.35)" stroke-width="1"/>
+
+            <!-- Left window corner stars -->
+            <circle cx="63"  cy="124" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-l1"/>
+            <circle cx="105" cy="124" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-l2"/>
+            <circle cx="63"  cy="154" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-l3"/>
+            <circle cx="105" cy="154" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-l4"/>
+            <!-- Right window corner stars -->
+            <circle cx="175" cy="124" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-r1"/>
+            <circle cx="217" cy="124" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-r2"/>
+            <circle cx="175" cy="154" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-r3"/>
+            <circle cx="217" cy="154" r="2.5" fill="rgba(212,168,67,0.75)" class="window-star ws-r4"/>
+
+            <!-- Left eye (@) — three concentric rings + pupil -->
+            <circle cx="84" cy="138" r="9"   fill="none" stroke="rgba(212,168,67,0.55)" stroke-width="1"   class="eye-outer eye-l"/>
+            <circle cx="84" cy="138" r="5.5" fill="none" stroke="rgba(212,168,67,0.5)"  stroke-width="0.8" class="eye-iris  eye-l-iris"/>
+            <circle cx="84" cy="138" r="2"   fill="rgba(212,168,67,0.75)"/>
+            <!-- Right eye (@) -->
+            <circle cx="196" cy="138" r="9"   fill="none" stroke="rgba(212,168,67,0.55)" stroke-width="1"   class="eye-outer eye-r"/>
+            <circle cx="196" cy="138" r="5.5" fill="none" stroke="rgba(212,168,67,0.5)"  stroke-width="0.8" class="eye-iris  eye-r-iris"/>
+            <circle cx="196" cy="138" r="2"   fill="rgba(212,168,67,0.75)"/>
+
+            <!-- Star of Fëanor — translates to arch-top center, rotates slowly -->
+            <g transform="translate(140, 65)">
+              <g class="durin-star-group">
+                <polygon
+                  points="0,-17 4.75,-8.23 14.72,-8.5 9.5,0 14.72,8.5 4.75,8.23 0,17 -4.75,8.23 -14.72,8.5 -9.5,0 -14.72,-8.5 -4.75,-8.23"
+                  fill="none"
+                  stroke="rgba(212,168,67,0.9)"
+                  stroke-width="1.2"
+                  stroke-linejoin="round"
+                />
+                <circle cx="0" cy="0" r="2.5" fill="rgba(212,168,67,0.95)"/>
+              </g>
+            </g>
+
+            <!-- Inscription -->
+            <text
+              x="140" y="186"
+              text-anchor="middle"
+              font-family="monospace"
+              font-size="8.5"
+              letter-spacing="1.5"
+              fill="rgba(212,168,67,0.65)"
+              class="gate-inscription-text"
+            >&#x2736; SPEAK FRIEND AND ENTER &#x2736;</text>
+
+            <!-- Pillar stubs below frame -->
+            <g stroke="rgba(212,168,67,0.3)" stroke-width="3" stroke-linecap="round">
+              <line x1="55"  y1="199" x2="55"  y2="211"/>
+              <line x1="80"  y1="199" x2="80"  y2="211"/>
+              <line x1="105" y1="199" x2="105" y2="211"/>
+              <line x1="140" y1="199" x2="140" y2="211"/>
+              <line x1="175" y1="199" x2="175" y2="211"/>
+              <line x1="200" y1="199" x2="200" y2="211"/>
+              <line x1="225" y1="199" x2="225" y2="211"/>
+            </g>
+          </svg>
         </div>
       </div>
 
@@ -257,6 +327,80 @@ function startGame() {
 .ember-12 { left: 43%; width: 3px; height: 3px; --dur: 8s;  --del: 0.9s;  --drift: -20px; }
 .ember-13 { left: 55%; width: 2px; height: 2px; --dur: 10s; --del: 7.0s;  --drift:  25px; background: rgba(255, 200, 50, 0.45); }
 .ember-14 { left: 77%; width: 4px; height: 4px; --dur: 11.5s;--del:4.8s;  --drift: -10px; background: rgba(212, 168, 67, 0.5); }
+
+/* ── Moria Gate SVG ──────────────────────────────────────── */
+.moria-gate-svg {
+  max-width: 420px;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Arch stars twinkle independently */
+@keyframes gate-star-twinkle {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 1;   filter: drop-shadow(0 0 4px rgba(212,168,67,0.9)); }
+}
+.arch-star      { animation: gate-star-twinkle 2.8s ease-in-out infinite; }
+.arch-star-1    { animation-duration: 2.9s; animation-delay: 0.0s; }
+.arch-star-2    { animation-duration: 2.3s; animation-delay: 0.7s; }
+.arch-star-3    { animation-duration: 3.1s; animation-delay: 1.3s; }
+.arch-star-4    { animation-duration: 2.6s; animation-delay: 0.4s; }
+.arch-star-5    { animation-duration: 2.0s; animation-delay: 1.0s; }
+.arch-star-6    { animation-duration: 3.4s; animation-delay: 1.6s; }
+.arch-star-7    { animation-duration: 2.7s; animation-delay: 0.2s; }
+
+/* Arch outline breathes */
+@keyframes gate-arch-pulse {
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 1;   filter: drop-shadow(0 0 5px rgba(212,168,67,0.45)); }
+}
+.gate-arch-line { animation: gate-arch-pulse 6s ease-in-out infinite; }
+
+/* Star of Fëanor — slow rotation + glow */
+@keyframes durin-star-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes durin-star-glow {
+  0%, 100% { filter: drop-shadow(0 0  5px rgba(212,168,67,0.45)) drop-shadow(0 0 14px rgba(212,168,67,0.2)); }
+  50%       { filter: drop-shadow(0 0 11px rgba(212,168,67,1))    drop-shadow(0 0 28px rgba(212,168,67,0.55)); }
+}
+.durin-star-group {
+  animation: durin-star-rotate 28s linear infinite,
+             durin-star-glow    4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Eyes glow — left and right on offset timers */
+@keyframes eye-glow {
+  0%, 100% { opacity: 0.65; }
+  50%       { opacity: 1;    filter: drop-shadow(0 0 6px rgba(212,168,67,0.7)); }
+}
+.eye-outer, .eye-iris { animation: eye-glow 5s ease-in-out infinite; }
+.eye-r, .eye-r-iris   { animation-delay: 2.2s; }
+
+/* Window corner stars shimmer with staggered delays */
+@keyframes window-star-shimmer {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1;   filter: drop-shadow(0 0 4px rgba(212,168,67,0.85)); }
+}
+.window-star { animation: window-star-shimmer 3.5s ease-in-out infinite; }
+.ws-l1 { animation-delay: 0.00s; }
+.ws-l2 { animation-delay: 0.70s; }
+.ws-l3 { animation-delay: 1.40s; }
+.ws-l4 { animation-delay: 2.10s; }
+.ws-r1 { animation-delay: 0.35s; }
+.ws-r2 { animation-delay: 1.05s; }
+.ws-r3 { animation-delay: 1.75s; }
+.ws-r4 { animation-delay: 2.45s; }
+
+/* Inscription glows on a slow pulse */
+@keyframes inscription-glow {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 0.9; filter: drop-shadow(0 0 6px rgba(212,168,67,0.5)); }
+}
+.gate-inscription-text { animation: inscription-glow 8s ease-in-out 1s infinite; }
 
 /* ── Rune sweep ──────────────────────────────────────────── */
 @keyframes rune-sweep {
