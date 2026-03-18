@@ -51,7 +51,7 @@ function startGame() {
         <h1 class="title-glow text-3xl sm:text-5xl font-bold text-moria-highlight mb-2 tracking-widest">
           MINES OF MORIA
         </h1>
-        <div class="text-moria-border text-xs sm:text-sm tracking-[0.3em] mb-8">
+        <div class="subtitle-breathe text-moria-border text-xs sm:text-sm tracking-[0.3em] mb-8">
           A DUNGEON OF MIDDLE-EARTH
         </div>
       </div>
@@ -60,6 +60,7 @@ function startGame() {
       <div class="fade-in-item mb-7 relative" style="--delay: 0.45s">
         <div class="border border-moria-highlight/20 rounded-lg bg-moria-panel/50 px-4 py-5 sm:px-8 sm:py-6 relative overflow-hidden door-panel">
           <div class="door-inner-glow absolute inset-0 rounded-lg pointer-events-none"></div>
+          <div class="rune-sweep absolute inset-0 rounded-lg pointer-events-none" aria-hidden="true"></div>
           <pre class="text-moria-highlight/75 text-[9px] sm:text-[11px] font-mono leading-snug select-none relative z-10">        *       *       *
      *     *   *   *     *
    *                         *
@@ -256,4 +257,57 @@ function startGame() {
 .ember-12 { left: 43%; width: 3px; height: 3px; --dur: 8s;  --del: 0.9s;  --drift: -20px; }
 .ember-13 { left: 55%; width: 2px; height: 2px; --dur: 10s; --del: 7.0s;  --drift:  25px; background: rgba(255, 200, 50, 0.45); }
 .ember-14 { left: 77%; width: 4px; height: 4px; --dur: 11.5s;--del:4.8s;  --drift: -10px; background: rgba(212, 168, 67, 0.5); }
+
+/* ── Rune sweep ──────────────────────────────────────────── */
+@keyframes rune-sweep {
+  0%,  51%, 100% { transform: translateX(-120%) skewX(-15deg); opacity: 0; }
+  4%             { opacity: 1; }
+  46%            { opacity: 0.7; }
+  50%            { transform: translateX(300%) skewX(-15deg); opacity: 0; }
+}
+.rune-sweep::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 35%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 168, 67, 0.06) 25%,
+    rgba(212, 168, 67, 0.15) 50%,
+    rgba(212, 168, 67, 0.06) 75%,
+    transparent
+  );
+  animation: rune-sweep 11s ease-in-out 4s infinite;
+  border-radius: inherit;
+}
+
+/* ── Title entrance flare ────────────────────────────────── */
+@keyframes title-entrance-flare {
+  0%   { filter: brightness(0.2) blur(4px); }
+  35%  { filter: brightness(3)   blur(0px); }
+  65%  { filter: brightness(1.4) blur(0px); }
+  100% { filter: brightness(1)   blur(0px); }
+}
+.content-visible .title-glow {
+  animation:
+    torch-glow 3.5s ease-in-out infinite,
+    title-entrance-flare 2s ease-out 0.15s both;
+}
+
+/* ── Subtitle breathe ────────────────────────────────────── */
+@keyframes subtitle-breathe {
+  0%, 100% {
+    opacity: 0.65;
+    text-shadow: none;
+  }
+  50% {
+    opacity: 0.9;
+    text-shadow: 0 0 12px rgba(212, 168, 67, 0.35);
+  }
+}
+.subtitle-breathe {
+  animation: subtitle-breathe 6s ease-in-out 2s infinite;
+}
 </style>
