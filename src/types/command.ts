@@ -19,6 +19,7 @@ export type CommandType =
   | 'search'
   | 'destroy'
   | 'craft'
+  | 'choose'
   | 'inventory'
   | 'stats'
   | 'help'

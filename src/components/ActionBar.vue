@@ -12,6 +12,7 @@ const combatStore = useCombatStore()
 const player = computed(() => playerStore.player)
 const inCombat = computed(() => combatStore.inCombat)
 const atForge = computed(() => gameStore.currentRoomId === 'abandoned-forge' && !inCombat.value)
+const activeChoice = computed(() => gameStore.activeChoice)
 
 interface ActionItem {
   id: string
@@ -83,8 +84,18 @@ function itemActionLabel(item: { id: string; name: string; type: string }) {
 
 <template>
   <div v-if="player && gameStore.phase === 'playing'" class="flex flex-wrap gap-1.5 md:gap-2 px-1 shrink-0">
+    <!-- Active Choice -->
+    <template v-if="activeChoice">
+      <button
+        v-for="opt in activeChoice.options"
+        :key="opt.id"
+        @click="cmd(`choose ${opt.id}`)"
+        class="px-2.5 py-1.5 md:px-2 md:py-1 text-[11px] md:text-xs rounded border border-purple-500/60 bg-purple-500/15 text-purple-400 hover:bg-purple-500/30 cursor-pointer transition-colors"
+      >{{ opt.label }}</button>
+    </template>
+
     <!-- Combat Mode -->
-    <template v-if="inCombat">
+    <template v-else-if="inCombat">
       <!-- Attack buttons -->
       <button
         v-for="enemy in combatStore.livingEnemies"

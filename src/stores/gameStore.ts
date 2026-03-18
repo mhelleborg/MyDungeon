@@ -37,6 +37,9 @@ import { useCombatStore } from './combatStore'
 import { useStatsStore } from './statsStore'
 import { listRecipes, tryCraft, craftedItems } from '../engine/crafting'
 import { applyStatusEffect } from '../engine/statusEffects'
+import type { ActiveChoice } from '../types/choice'
+import { choices } from '../data/choices'
+import { presentChoice, resolveChoice, type ChoiceResolutionResult } from '../engine/handlers/choiceHandler'
 
 export type GamePhase = 'title' | 'character-select' | 'playing' | 'game-over' | 'victory'
 
@@ -62,6 +65,13 @@ export const useGameStore = defineStore('game', () => {
   const recruitableNPCsOffered = ref<Set<string>>(new Set())
   const seenEncounters = ref<Set<string>>(new Set())
   const activeEncounter = ref<ActiveEncounter | null>(null)
+  const activeChoice = ref<ActiveChoice | null>(null)
+  const choicesMade = ref<Record<string, string>>({})
+  const choiceConsequences = ref<Record<string, boolean>>({})
+  /** Enemies removed from rooms by choice consequences: `roomId:enemyId` → count removed */
+  const removedEnemies = ref<Record<string, number>>({})
+  /** Enemies spawned into rooms by choice consequences */
+  const addedEnemies = ref<Record<string, { enemyId: string; count: number }[]>>({})
 
   const currentRoom = computed(() => getRoom(currentRoomId.value))
 
@@ -152,6 +162,11 @@ export const useGameStore = defineStore('game', () => {
     recruitableNPCsOffered.value = new Set()
     seenEncounters.value = new Set()
     activeEncounter.value = null
+    activeChoice.value = null
+    choicesMade.value = {}
+    choiceConsequences.value = {}
+    removedEnemies.value = {}
+    addedEnemies.value = {}
     applyLightState({ hasLight: false, turnsRemaining: 0, permanent: false })
 
     roomItems.value = {}
@@ -184,6 +199,7 @@ export const useGameStore = defineStore('game', () => {
     if (currentRoomId.value !== roomId) {
       previousRoomId.value = currentRoomId.value
       activeEncounter.value = null // clear encounter on room change
+      activeChoice.value = null   // clear choice on room change
     }
     currentRoomId.value = roomId
     const wasNew = !visitedRooms.value.has(roomId)
@@ -260,6 +276,24 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
+    // Room-based choices (trigger once after room is cleared)
+    if (roomId === 'goblin-tunnels' && clearedRooms.value.has(roomId) && !choicesMade.value['wounded-goblin']) {
+      const choice = choices['wounded-goblin']
+      if (choice) {
+        const result = presentChoice(choice)
+        pushLogs(result.logs)
+        activeChoice.value = result.activeChoice
+      }
+    }
+    if (roomId === 'mining-shaft' && revealedExits.value.has('mining-shaft-west') && !choicesMade.value['sealed-vault']) {
+      const choice = choices['sealed-vault']
+      if (choice) {
+        const result = presentChoice(choice)
+        pushLogs(result.logs)
+        activeChoice.value = result.activeChoice
+      }
+    }
+
     // Trap (pure handler)
     if (room.trap && !disarmedTraps.value.has(roomId)) {
       const playerStore = usePlayerStore()
@@ -277,10 +311,34 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
-    // Combat
-    if (room.enemies && room.enemies.length > 0 && !clearedRooms.value.has(roomId)) {
+    // Combat (including choice-spawned enemies)
+    const hasOriginalEnemies = room.enemies && room.enemies.length > 0 && !clearedRooms.value.has(roomId)
+    const spawnedEnemies = addedEnemies.value[roomId]
+    if (hasOriginalEnemies || spawnedEnemies) {
       const combatStore = useCombatStore()
-      pushLogs(combatStore.startCombat(room.enemies, dark))
+      // Build effective enemy list
+      let effectiveEnemies = hasOriginalEnemies ? [...room.enemies!] : []
+      // Remove enemies reduced by choices
+      effectiveEnemies = effectiveEnemies.map(re => {
+        const key = `${roomId}:${re.enemyId}`
+        const removed = removedEnemies.value[key] ?? 0
+        if (removed > 0) {
+          const newCount = Math.max(0, re.count - removed)
+          return { ...re, count: newCount }
+        }
+        return re
+      }).filter(re => re.count > 0)
+      // Add choice-spawned enemies
+      if (spawnedEnemies) {
+        for (const se of spawnedEnemies) {
+          effectiveEnemies.push({ enemyId: se.enemyId, count: se.count })
+        }
+        // Spawned enemies are one-time — clear after triggering
+        delete addedEnemies.value[roomId]
+      }
+      if (effectiveEnemies.length > 0) {
+        pushLogs(combatStore.startCombat(effectiveEnemies, dark))
+      }
     }
 
     // Mid-run achievements
@@ -340,6 +398,7 @@ export const useGameStore = defineStore('game', () => {
       case 'say':     handleSay(cmd); break
       case 'solve':   handleSolve(cmd); break
       case 'craft':   handleCraft(cmd); break
+      case 'choose':  handleChoose(cmd); break
       case 'inventory': handleInventory(); break
       case 'stats':   handleStats(); break
       case 'help':    handleHelp(); break
@@ -543,7 +602,9 @@ export const useGameStore = defineStore('game', () => {
     const combatStore = useCombatStore()
     if (!combatStore.inCombat) { log('There is nothing to attack here.', 'error'); return }
 
-    pushLogs(combatStore.doPlayerAttack(cmd.target))
+    const combatLogs = combatStore.doPlayerAttack(cmd.target)
+    pushLogs(combatLogs.filter(l => l.text !== '__BRIDGE_SACRIFICE__'))
+    checkBridgeSacrificeSignal(combatLogs)
     markRoomCleared()
     checkDeath()
   }
@@ -568,9 +629,26 @@ export const useGameStore = defineStore('game', () => {
     const combatStore = useCombatStore()
     if (!combatStore.inCombat) { log('You can only cast combat spells during battle.', 'error'); return }
 
-    pushLogs(combatStore.doPlayerCast(cmd.target))
+    const combatLogs = combatStore.doPlayerCast(cmd.target)
+    pushLogs(combatLogs.filter(l => l.text !== '__BRIDGE_SACRIFICE__'))
+    checkBridgeSacrificeSignal(combatLogs)
     markRoomCleared()
     checkDeath()
+  }
+
+  /** Check if combat logs contain the bridge sacrifice trigger signal. */
+  function checkBridgeSacrificeSignal(logs: GameLogEntry[]) {
+    if (!logs.some(l => l.text === '__BRIDGE_SACRIFICE__')) return
+    if (choicesMade.value['bridge-sacrifice']) return
+    const livingCompanion = companions.value.find(c => c.hp > 0)
+    if (!livingCompanion) return
+
+    const choice = choices['bridge-sacrifice']
+    if (choice) {
+      const result = presentChoice(choice, livingCompanion.name)
+      pushLogs(result.logs)
+      activeChoice.value = result.activeChoice
+    }
   }
 
   // ── Take ───────────────────────────────────────────────────
@@ -936,6 +1014,17 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
+    // Ori's forbidden knowledge choice — triggers on second talk after interaction
+    if (npc.id === 'ghost-of-ori' && interactedNPCs.value.has(npc.id) && !choicesMade.value['oris-knowledge']) {
+      const choice = choices['oris-knowledge']
+      if (choice) {
+        const choiceResult = presentChoice(choice)
+        pushLogs(choiceResult.logs)
+        activeChoice.value = choiceResult.activeChoice
+      }
+      return
+    }
+
     // After quest reward given (interacted), offer recruitment if applicable
     if (npc.recruitableCompanionId && interactedNPCs.value.has(npc.id) && !recruitableNPCsOffered.value.has(npc.id)) {
       if (!companions.value.some(c => c.id === npc.recruitableCompanionId)) {
@@ -1202,6 +1291,145 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  // ── Choices ──────────────────────────────────────────────
+  function handleChoose(cmd: ParsedCommand) {
+    if (!activeChoice.value) {
+      log('There is no choice to make right now.', 'error')
+      return
+    }
+
+    const optionId = cmd.target?.toLowerCase()
+    if (!optionId) {
+      log('Choose what? Type "choose <option>".', 'error')
+      return
+    }
+
+    // Match option by id or label
+    const option = activeChoice.value.options.find(
+      o => o.id === optionId || o.label.toLowerCase().includes(optionId),
+    )
+    if (!option) {
+      const validOptions = activeChoice.value.options.map(o => o.id).join(', ')
+      log(`Unknown option "${optionId}". Valid options: ${validOptions}`, 'error')
+      return
+    }
+
+    const playerStore = usePlayerStore()
+    if (!playerStore.player) return
+
+    const result = resolveChoice(activeChoice.value.choiceId, option.id, {
+      inventory: playerStore.inventory,
+      companions: companions.value,
+    })
+
+    // If no optionId in result, resolution failed (e.g., missing potion)
+    if (!result.optionId) {
+      pushLogs(result.logs)
+      return
+    }
+
+    pushLogs(result.logs)
+    applyChoiceConsequences(result, playerStore)
+
+    // Record the choice
+    choicesMade.value[result.choiceId] = result.optionId
+    activeChoice.value = null
+
+    // Track stats
+    useStatsStore().recordChoiceMade(result.choiceId, result.optionId)
+
+    checkDeath()
+    useStatsStore().checkMidRunAchievements()
+  }
+
+  function applyChoiceConsequences(result: ChoiceResolutionResult, playerStore: ReturnType<typeof usePlayerStore>) {
+    if (!playerStore.player) return
+
+    if (result.xp) pushLogs(playerStore.addXp(result.xp))
+    if (result.gold) playerStore.player.gold += result.gold
+
+    if (result.consumeHealingPotion) {
+      playerStore.removeItem('healing-potion')
+    }
+
+    if (result.itemIds) {
+      for (const itemId of result.itemIds) {
+        dropItemToGround(itemId)
+      }
+    }
+
+    if (result.maxHpChange) {
+      playerStore.player.maxHp += result.maxHpChange
+      playerStore.player.hp = Math.min(playerStore.player.hp, playerStore.player.maxHp)
+      if (result.maxHpChange < 0) {
+        log(`Your maximum HP is reduced by ${Math.abs(result.maxHpChange)}.`, 'combat')
+      }
+    }
+
+    if (result.attackBonus) {
+      // Add as a long-duration status effect
+      playerStore.player.statusEffects.push({
+        id: 'blessed' as import('../types/statusEffect').StatusEffectId,
+        name: "Ori's Battle-Lore",
+        description: 'Forbidden knowledge of dwarven combat burns in your mind.',
+        duration: 9999,
+        attackBonus: result.attackBonus,
+      })
+    }
+
+    if (result.acBonus) {
+      playerStore.player.statusEffects.push({
+        id: 'blessed' as import('../types/statusEffect').StatusEffectId,
+        name: "Ori's Blessing",
+        description: 'The shade of Ori guards your steps.',
+        duration: 9999,
+        acBonus: result.acBonus,
+      })
+    }
+
+    if (result.removeEnemies) {
+      const { roomId, enemyId, count } = result.removeEnemies
+      const key = `${roomId}:${enemyId}`
+      removedEnemies.value[key] = (removedEnemies.value[key] ?? 0) + count
+    }
+
+    if (result.spawnEnemies) {
+      const { roomId, enemyId, count } = result.spawnEnemies
+      if (!addedEnemies.value[roomId]) addedEnemies.value[roomId] = []
+      addedEnemies.value[roomId]!.push({ enemyId, count })
+      // Also un-clear the room so combat triggers on next entry
+      clearedRooms.value.delete(roomId)
+    }
+
+    if (result.sacrificeCompanion) {
+      const living = companions.value.find(c => c.hp > 0)
+      if (living) {
+        living.hp = 0
+        log(`${living.name} has fallen.`, 'combat')
+      }
+    }
+
+    if (result.bossDamage) {
+      const combatStore = useCombatStore()
+      const balrog = combatStore.livingEnemies.find(e => e.id === 'balrog')
+      if (balrog) {
+        balrog.hp -= result.bossDamage
+        if (balrog.hp <= 0) balrog.hp = 0
+      }
+    }
+
+    if (result.skipEnemyTurn) {
+      const combatStore = useCombatStore()
+      combatStore.skipNextEnemyTurn = true
+    }
+
+    if (result.consequenceFlags) {
+      for (const [key, val] of Object.entries(result.consequenceFlags)) {
+        choiceConsequences.value[key] = val
+      }
+    }
+  }
+
   // ── Save / Load ──────────────────────────────────────────
   function handleSave() {
     import('../engine/saveLoad').then(({ saveGame }) => {
@@ -1308,6 +1536,11 @@ export const useGameStore = defineStore('game', () => {
     recruitableNPCsOffered,
     seenEncounters,
     activeEncounter,
+    activeChoice,
+    choicesMade,
+    choiceConsequences,
+    removedEnemies,
+    addedEnemies,
     getDifficultyMultipliers,
     initGame,
     handleCommand,

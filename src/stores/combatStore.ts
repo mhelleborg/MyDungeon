@@ -24,6 +24,7 @@ export const useCombatStore = defineStore('combat', () => {
   const bossPhase = ref<BossPhase>(0)
   const bossFallBack = ref(false)
   const lastCritical = ref(false)
+  const skipNextEnemyTurn = ref(false)
 
   const livingEnemies = computed(() => combatEnemies.value.filter(e => e.hp > 0))
   const combatOver = computed(() => inCombat.value && livingEnemies.value.length === 0)
@@ -36,6 +37,7 @@ export const useCombatStore = defineStore('combat', () => {
     darkCombat.value = isDark
     bossPhase.value = 0
     bossFallBack.value = false
+    skipNextEnemyTurn.value = false
 
     const multipliers = getDifficultyMultipliers()
 
@@ -89,6 +91,15 @@ export const useCombatStore = defineStore('combat', () => {
     if (transition) {
       logs.push(...transition.logs)
       bossPhase.value = transition.newPhase
+
+      // Bridge sacrifice choice: offered at phase 2 if companion alive and choice not made
+      if (transition.newPhase === 2) {
+        const livingCompanion = companions.value.find(c => c.hp > 0)
+        if (livingCompanion) {
+          // Signal to gameStore to present the choice (via event on logs)
+          logs.push({ text: `__BRIDGE_SACRIFICE__`, type: 'system', timestamp: 0 })
+        }
+      }
     }
 
     // Environmental fire damage in phases 2+
@@ -371,6 +382,12 @@ export const useCombatStore = defineStore('combat', () => {
   }
 
   function doEnemyTurns(): GameLogEntry[] {
+    // Skip enemy turn if triggered by companion sacrifice
+    if (skipNextEnemyTurn.value) {
+      skipNextEnemyTurn.value = false
+      return [{ text: 'The enemies are momentarily stunned — you have a free round!', type: 'combat', timestamp: Date.now() }]
+    }
+
     const playerStore = usePlayerStore()
     if (!playerStore.player) return []
 
@@ -563,6 +580,7 @@ export const useCombatStore = defineStore('combat', () => {
     combatEnemies.value = []
     bossPhase.value = 0
     bossFallBack.value = false
+    skipNextEnemyTurn.value = false
 
     // Clear combat-only status effects (keep blessed)
     const playerStore = usePlayerStore()
@@ -583,6 +601,7 @@ export const useCombatStore = defineStore('combat', () => {
     bossFallBack,
     isBossFight,
     lastCritical,
+    skipNextEnemyTurn,
     startCombat,
     doPlayerAttack,
     doPlayerCast,

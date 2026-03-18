@@ -105,6 +105,11 @@ export function parseCommand(input: string): ParsedCommand {
     return { type: 'search', target: rest || undefined, raw }
   }
 
+  // Choose (branching choices)
+  if (verb === 'choose' || verb === 'decide') {
+    return { type: 'choose', target: rest || undefined, raw }
+  }
+
   // Craft
   if (verb === 'craft' || verb === 'forge') {
     return { type: 'craft', target: rest || undefined, raw }
