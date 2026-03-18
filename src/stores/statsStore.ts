@@ -26,6 +26,8 @@ export const useStatsStore = defineStore('stats', () => {
   const balrogSlain = ref(false)
   const foundItems = ref<string[]>([])
   const itemsCrafted = ref(0)
+  const choicesMadeCount = ref(0)
+  const mercyShown = ref(false)
 
   // ── Persistent achievements ──────────────────────────────
   const unlockedAchievements = ref<Set<string>>(loadAchievements())
@@ -73,6 +75,8 @@ export const useStatsStore = defineStore('stats', () => {
     balrogSlain.value = false
     foundItems.value = []
     itemsCrafted.value = 0
+    choicesMadeCount.value = 0
+    mercyShown.value = false
     newlyUnlocked.value = []
   }
 
@@ -92,6 +96,12 @@ export const useStatsStore = defineStore('stats', () => {
   function recordFleeAttempt() { fleeAttempts.value++ }
   function recordBalrogSlain() { balrogSlain.value = true }
   function recordItemCrafted() { itemsCrafted.value++ }
+  function recordChoiceMade(choiceId: string, optionId: string) {
+    choicesMadeCount.value++
+    if (choiceId === 'wounded-goblin' && optionId === 'mercy') {
+      mercyShown.value = true
+    }
+  }
 
   function dismissToast(id: string) {
     toastQueue.value = toastQueue.value.filter(t => t.id !== id)
@@ -115,6 +125,8 @@ export const useStatsStore = defineStore('stats', () => {
       difficulty: difficulty.value,
       balrogSlain: balrogSlain.value,
       itemsCrafted: itemsCrafted.value,
+      choicesMadeCount: choicesMadeCount.value,
+      mercyShown: mercyShown.value,
     }
   }
 
@@ -193,6 +205,9 @@ export const useStatsStore = defineStore('stats', () => {
     recordFleeAttempt,
     recordBalrogSlain,
     recordItemCrafted,
+    recordChoiceMade,
+    choicesMadeCount,
+    mercyShown,
     checkEndOfRun,
   }
 })

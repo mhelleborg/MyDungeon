@@ -8,8 +8,9 @@ import type { DifficultyLevel } from './difficulty'
 import type { PlayerClass } from './character'
 import type { BossPhase } from '../engine/handlers/bossHandler'
 import type { ActiveEncounter } from './encounter'
+import type { ActiveChoice } from './choice'
 
-export const SAVE_VERSION = 1
+export const SAVE_VERSION = 2
 export const SAVE_KEY = 'moria-save'
 
 export interface SaveData {
@@ -44,6 +45,11 @@ export interface SaveData {
   recruitableNPCsOffered: string[]
   seenEncounters: string[]
   activeEncounter: ActiveEncounter | null
+  activeChoice: ActiveChoice | null
+  choicesMade: Record<string, string>
+  choiceConsequences: Record<string, boolean>
+  removedEnemies: Record<string, number>
+  addedEnemies: Record<string, { enemyId: string; count: number }[]>
 
   // combatStore
   inCombat: boolean
@@ -52,6 +58,7 @@ export interface SaveData {
   darkCombat: boolean
   bossPhase: BossPhase
   bossFallBack: boolean
+  skipNextEnemyTurn: boolean
 
   // statsStore (per-run only; achievements self-persist)
   statsStore: {
@@ -71,5 +78,7 @@ export interface SaveData {
     difficulty: DifficultyLevel
     balrogSlain: boolean
     foundItems: string[]
+    choicesMadeCount: number
+    mercyShown: boolean
   }
 }

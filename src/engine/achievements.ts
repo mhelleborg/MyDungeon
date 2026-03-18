@@ -25,6 +25,8 @@ export interface RunStats {
   difficulty: DifficultyLevel
   balrogSlain: boolean
   itemsCrafted: number
+  choicesMadeCount: number
+  mercyShown: boolean
 }
 
 export const achievements: Record<string, Achievement> = {
@@ -94,6 +96,12 @@ export const achievements: Record<string, Achievement> = {
     description: 'Craft an item at the Abandoned Forge.',
     icon: 'F',
   },
+  'mercy-of-the-valar': {
+    id: 'mercy-of-the-valar',
+    name: 'Mercy of the Valar',
+    description: 'Show mercy to the wounded goblin.',
+    icon: 'V',
+  },
 }
 
 const TOTAL_PUZZLES = 5 // speak-friend, forge-levers, gargoyle-riddle, stair-descent, records-ward
@@ -128,6 +136,10 @@ export function checkMidRunAchievements(stats: RunStats, foundItems: string[]): 
 
   if (stats.itemsCrafted >= 1) {
     earned.push('forge-master')
+  }
+
+  if (stats.mercyShown) {
+    earned.push('mercy-of-the-valar')
   }
 
   return earned

@@ -55,6 +55,11 @@ export function serialize(): SaveData {
     recruitableNPCsOffered: setToArray(gameStore.recruitableNPCsOffered),
     seenEncounters: setToArray(gameStore.seenEncounters),
     activeEncounter: gameStore.activeEncounter ? JSON.parse(JSON.stringify(gameStore.activeEncounter)) : null,
+    activeChoice: gameStore.activeChoice ? JSON.parse(JSON.stringify(gameStore.activeChoice)) : null,
+    choicesMade: { ...gameStore.choicesMade },
+    choiceConsequences: { ...gameStore.choiceConsequences },
+    removedEnemies: { ...gameStore.removedEnemies },
+    addedEnemies: JSON.parse(JSON.stringify(gameStore.addedEnemies)),
 
     // combatStore
     inCombat: combatStore.inCombat,
@@ -63,6 +68,7 @@ export function serialize(): SaveData {
     darkCombat: combatStore.darkCombat,
     bossPhase: combatStore.bossPhase,
     bossFallBack: combatStore.bossFallBack,
+    skipNextEnemyTurn: combatStore.skipNextEnemyTurn,
 
     // statsStore
     statsStore: {
@@ -82,6 +88,8 @@ export function serialize(): SaveData {
       difficulty: statsStore.difficulty,
       balrogSlain: statsStore.balrogSlain,
       foundItems: [...statsStore.foundItems],
+      choicesMadeCount: statsStore.choicesMadeCount,
+      mercyShown: statsStore.mercyShown,
     },
   }
 }
@@ -120,6 +128,11 @@ export function deserialize(data: SaveData): void {
   gameStore.recruitableNPCsOffered = arrayToSet(data.recruitableNPCsOffered)
   gameStore.seenEncounters = arrayToSet(data.seenEncounters ?? [])
   gameStore.activeEncounter = data.activeEncounter ?? null
+  gameStore.activeChoice = data.activeChoice ?? null
+  gameStore.choicesMade = data.choicesMade ?? {}
+  gameStore.choiceConsequences = data.choiceConsequences ?? {}
+  gameStore.removedEnemies = data.removedEnemies ?? {}
+  gameStore.addedEnemies = data.addedEnemies ?? {}
 
   // combatStore
   combatStore.inCombat = data.inCombat
@@ -128,6 +141,7 @@ export function deserialize(data: SaveData): void {
   combatStore.darkCombat = data.darkCombat
   combatStore.bossPhase = data.bossPhase as BossPhase
   combatStore.bossFallBack = data.bossFallBack
+  combatStore.skipNextEnemyTurn = data.skipNextEnemyTurn ?? false
 
   // statsStore
   const ss = data.statsStore
@@ -147,6 +161,8 @@ export function deserialize(data: SaveData): void {
   statsStore.difficulty = ss.difficulty
   statsStore.balrogSlain = ss.balrogSlain
   statsStore.foundItems = ss.foundItems
+  statsStore.choicesMadeCount = ss.choicesMadeCount ?? 0
+  statsStore.mercyShown = ss.mercyShown ?? false
 
   // Re-splice recruited companions out of roomNPCs
   for (const comp of data.companions) {
