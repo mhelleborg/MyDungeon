@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { GameLogEntry, ParsedCommand } from '../types/command'
 import { rooms, getRoom, STARTING_ROOM } from '../data/rooms'
-import { items as itemDb } from '../data/items'
+import { items as moriaItems } from '../data/items'
 import { parseCommand } from '../engine/commandParser'
 import { rollAmbientEvent } from '../engine/ambientEvents'
 import { validateMove } from '../engine/handlers/moveHandler'
@@ -21,7 +21,7 @@ import { playSound } from '../engine/audio'
 import { checkRecruitment, rollCompanionComment } from '../engine/handlers/companionHandler'
 import { difficulty, currentRoomId, roomItems, companions, getDifficultyMultipliers, dropItemToGround } from './gameContext'
 import { SAVE_KEY } from '../types/save'
-import { encounters as encounterPool } from '../data/encounters'
+import { encounters as moriaEncounters } from '../data/encounters'
 import {
   shouldTriggerEncounter,
   selectEncounter,
@@ -40,8 +40,29 @@ import { applyStatusEffect } from '../engine/statusEffects'
 import type { ActiveChoice } from '../types/choice'
 import { choices } from '../data/choices'
 import { presentChoice, resolveChoice, type ChoiceResolutionResult } from '../engine/handlers/choiceHandler'
+// ── Act 2 imports ────────────────────────────────────────────────────────────
+import { lothlorienNPCs, lothlorienRoomNPCs } from '../data/lothlorienNPCs'
+import { lothlorienRooms, lothlorienRoomInteractions } from '../data/lothlorienRooms'
+import { lothlorienChoices } from '../data/lothlorienChoices'
+import { lothlorienPuzzles, lothlorienRoomPuzzles } from '../data/lothlorienPuzzles'
+import { lothlorienEncounters } from '../data/lothlorienEncounters'
+import { lothlorienItems } from '../data/lothlorienItems'
+import { startDialogue, advanceDialogue } from '../engine/handlers/dialogueHandler'
+import type { DialogueContext } from '../engine/handlers/dialogueHandler'
+import type { ActiveDialogue } from '../types/dialogue'
+
+// ── Unified lookups across acts ─────────────────────────────────────────────
+const itemDb: Record<string, import('../types/item').Item> = { ...moriaItems, ...lothlorienItems }
+const encounterPool = [...moriaEncounters, ...lothlorienEncounters]
+const allNPCs: Record<string, import('../types/npc').NPC> = { ...npcs, ...lothlorienNPCs }
+const allRoomNPCs: Record<string, string[]> = { ...roomNPCs, ...lothlorienRoomNPCs }
+const allChoices: Record<string, import('../types/choice').Choice> = { ...choices, ...lothlorienChoices }
+const allPuzzles: Record<string, import('../types/puzzle').Puzzle> = { ...puzzles, ...lothlorienPuzzles }
+const allRoomPuzzles: Record<string, string[]> = { ...roomPuzzles, ...lothlorienRoomPuzzles }
+const allRoomInteractions: Record<string, import('../data/roomInteractions').RoomInteraction[]> = { ...roomInteractions, ...lothlorienRoomInteractions }
 
 export type GamePhase = 'title' | 'character-select' | 'playing' | 'game-over' | 'victory'
+export type ActId = 'moria' | 'lothlorien'
 
 export const useGameStore = defineStore('game', () => {
   // ── State ──────────────────────────────────────────────────
@@ -72,10 +93,20 @@ export const useGameStore = defineStore('game', () => {
   const removedEnemies = ref<Record<string, number>>({})
   /** Enemies spawned into rooms by choice consequences */
   const addedEnemies = ref<Record<string, { enemyId: string; count: number }[]>>({})
+  /** Current act */
+  const currentAct = ref<ActId>('moria')
+  /** Active branching dialogue */
+  const activeDialogue = ref<ActiveDialogue | null>(null)
+  /** Collected Nimrodel song fragments */
+  const nimrodelFragments = ref<Set<string>>(new Set())
 
-  const currentRoom = computed(() => getRoom(currentRoomId.value))
+  const currentRoom = computed(() => lookupRoom(currentRoomId.value))
 
   // ── Helpers ────────────────────────────────────────────────
+  function lookupRoom(id: string) {
+    return getRoom(id) ?? lothlorienRooms[id]
+  }
+
   function log(text: string, type: GameLogEntry['type'] = 'narrative') {
     gameLog.value.push({ text, type, timestamp: Date.now() })
   }
@@ -91,7 +122,7 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function isDark(roomId?: string): boolean {
-    const room = getRoom(roomId ?? currentRoomId.value)
+    const room = lookupRoom(roomId ?? currentRoomId.value)
     return !!room?.dark && !hasLight.value
   }
 
@@ -167,10 +198,18 @@ export const useGameStore = defineStore('game', () => {
     choiceConsequences.value = {}
     removedEnemies.value = {}
     addedEnemies.value = {}
+    currentAct.value = 'moria'
+    activeDialogue.value = null
+    nimrodelFragments.value = new Set()
     applyLightState({ hasLight: false, turnsRemaining: 0, permanent: false })
 
     roomItems.value = {}
     for (const [id, room] of Object.entries(rooms)) {
+      if (room.items && room.items.length > 0) {
+        roomItems.value[id] = [...room.items]
+      }
+    }
+    for (const [id, room] of Object.entries(lothlorienRooms)) {
       if (room.items && room.items.length > 0) {
         roomItems.value[id] = [...room.items]
       }
@@ -182,7 +221,7 @@ export const useGameStore = defineStore('game', () => {
     statsStore.initStats(
       playerStore.player!.class,
       difficulty.value,
-      Object.keys(rooms).length,
+      Object.keys(rooms).length + Object.keys(lothlorienRooms).length,
     )
 
     enterRoom(STARTING_ROOM)
@@ -190,10 +229,17 @@ export const useGameStore = defineStore('game', () => {
 
   // ── Room entry ─────────────────────────────────────────────
   function enterRoom(roomId: string) {
-    const room = getRoom(roomId)
+    const room = lookupRoom(roomId)
     if (!room) {
       log('You cannot go that way.', 'error')
       return
+    }
+
+    // Act transition: entering a Lothlórien room switches the act
+    if (lothlorienRooms[roomId] && currentAct.value === 'moria') {
+      currentAct.value = 'lothlorien'
+      log('— Act II: Lothlórien —', 'system')
+      log('You leave the darkness of Moria behind. The world opens before you in golden light.', 'narrative')
     }
 
     if (currentRoomId.value !== roomId) {
@@ -254,10 +300,10 @@ export const useGameStore = defineStore('game', () => {
     }
 
     // NPCs
-    const npcIds = roomNPCs[roomId]
+    const npcIds = allRoomNPCs[roomId]
     if (npcIds) {
       for (const npcId of npcIds) {
-        const npc = npcs[npcId]
+        const npc = allNPCs[npcId]
         if (npc) {
           if (dark && npc.detectableInDark) {
             log(`You hear a voice in the darkness: "${npc.name} calls out to you."`, 'narrative')
@@ -278,7 +324,7 @@ export const useGameStore = defineStore('game', () => {
 
     // Room-based choices (trigger once after room is cleared)
     if (roomId === 'goblin-tunnels' && clearedRooms.value.has(roomId) && !choicesMade.value['wounded-goblin']) {
-      const choice = choices['wounded-goblin']
+      const choice = allChoices['wounded-goblin']
       if (choice) {
         const result = presentChoice(choice)
         pushLogs(result.logs)
@@ -286,7 +332,25 @@ export const useGameStore = defineStore('game', () => {
       }
     }
     if (roomId === 'mining-shaft' && revealedExits.value.has('mining-shaft-west') && !choicesMade.value['sealed-vault']) {
-      const choice = choices['sealed-vault']
+      const choice = allChoices['sealed-vault']
+      if (choice) {
+        const result = presentChoice(choice)
+        pushLogs(result.logs)
+        activeChoice.value = result.activeChoice
+      }
+    }
+
+    // Lothlórien room-based choices
+    if (roomId === 'mirror-room' && !choicesMade.value['mirror-choice']) {
+      const choice = allChoices['mirror-choice']
+      if (choice) {
+        const result = presentChoice(choice)
+        pushLogs(result.logs)
+        activeChoice.value = result.activeChoice
+      }
+    }
+    if (roomId === 'orc-ambush-site' && clearedRooms.value.has(roomId) && !choicesMade.value['orc-prisoner']) {
+      const choice = allChoices['orc-prisoner']
       if (choice) {
         const result = presentChoice(choice)
         pushLogs(result.logs)
@@ -355,10 +419,21 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
-    // Victory
-    if (roomId === 'east-gate') {
+    // Act transition: east-gate leads into Lothlórien
+    if (roomId === 'east-gate' && currentAct.value === 'moria') {
       log('You emerge from the darkness into blinding sunlight. The Mines of Moria lie behind you.', 'narrative')
-      log('You have survived the crossing of Moria!', 'system')
+      log('You have survived the crossing of Moria! But your journey is not over...', 'system')
+      log('The road south leads toward the Golden Wood.', 'narrative')
+      // Add exit to dimrill-dale
+      const eastGateRoom = lookupRoom('east-gate')
+      if (eastGateRoom && !eastGateRoom.exits.some(e => e.targetRoomId === 'dimrill-dale')) {
+        eastGateRoom.exits.push({ direction: 'south', targetRoomId: 'dimrill-dale' })
+      }
+    }
+
+    // Victory (Act 2 farewell-lawn with farewell-path choice made)
+    if (roomId === 'farewell-lawn' && choicesMade.value['farewell-path']) {
+      log('Your time in Lothlórien draws to a close. The road ahead awaits.', 'narrative')
       useStatsStore().checkEndOfRun()
       localStorage.removeItem(SAVE_KEY)
       phase.value = 'victory'
@@ -493,13 +568,13 @@ export const useGameStore = defineStore('game', () => {
     }
 
     // Check for puzzle hints (examine runes, levers, inscription, doors, etc.)
-    const puzzleIds = roomPuzzles[currentRoomId.value]
+    const puzzleIds = allRoomPuzzles[currentRoomId.value]
     if (puzzleIds) {
       const examineTerms = ['rune', 'lever', 'inscription', 'door', 'forge', 'wall', 'symbol', 'carving', 'gargoyle', 'ledge', 'stair', 'shaft']
       const target = cmd.target!.toLowerCase()
       if (examineTerms.some(t => target.includes(t))) {
         for (const pid of puzzleIds) {
-          const puzzle = puzzles[pid]
+          const puzzle = allPuzzles[pid]
           if (puzzle) {
             const hintResult = getPuzzleHint(puzzle)
             pushLogs(hintResult.logs)
@@ -510,7 +585,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     // Check room interactions (data-driven examine responses)
-    const interactions = roomInteractions[currentRoomId.value]
+    const interactions = allRoomInteractions[currentRoomId.value]
     if (interactions) {
       const result = examineInteraction(
         interactions,
@@ -542,9 +617,9 @@ export const useGameStore = defineStore('game', () => {
     }
 
     // Check for NPC examine
-    const npcIds = roomNPCs[currentRoomId.value]
-    if (npcIds) {
-      const npc = npcIds.map(id => npcs[id]).find(n => n && n.name.toLowerCase().includes(cmd.target!.toLowerCase()))
+    const npcIdsExam = allRoomNPCs[currentRoomId.value]
+    if (npcIdsExam) {
+      const npc = npcIdsExam.map(id => allNPCs[id]).find(n => n && n.name.toLowerCase().includes(cmd.target!.toLowerCase()))
       if (npc) {
         log(`${npc.name}: ${npc.description}`, 'info')
         return
@@ -643,7 +718,7 @@ export const useGameStore = defineStore('game', () => {
     const livingCompanion = companions.value.find(c => c.hp > 0)
     if (!livingCompanion) return
 
-    const choice = choices['bridge-sacrifice']
+    const choice = allChoices['bridge-sacrifice']
     if (choice) {
       const result = presentChoice(choice, livingCompanion.name)
       pushLogs(result.logs)
@@ -710,7 +785,7 @@ export const useGameStore = defineStore('game', () => {
     )
     if (!item) {
       // Check for room use-actions (e.g. fire pit)
-      const roomInts = roomInteractions[currentRoomId.value]
+      const roomInts = allRoomInteractions[currentRoomId.value]
       if (roomInts) {
         const target = cmd.target!.toLowerCase()
         const match = roomInts.find(i =>
@@ -765,7 +840,7 @@ export const useGameStore = defineStore('game', () => {
     if (combatStore.inCombat) { log('You can\'t search while in combat!', 'error'); return }
     if (!cmd.target) { log('Search what? Usage: search <target>', 'error'); return }
 
-    const interactions = roomInteractions[currentRoomId.value]
+    const interactions = allRoomInteractions[currentRoomId.value]
     if (!interactions) { log('There is nothing worth searching here.', 'info'); return }
 
     const target = cmd.target.toLowerCase()
@@ -897,7 +972,7 @@ export const useGameStore = defineStore('game', () => {
       return
     }
 
-    const targetRoom = getRoom(moveCheck.exit.targetRoomId)
+    const targetRoom = lookupRoom(moveCheck.exit.targetRoomId)
     if (!targetRoom) return
 
     // If no enemies or already cleared, just move normally
@@ -964,16 +1039,71 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  // ── Dialogue context builder ──────────────────────────────
+  function buildDialogueContext(npcId: string): DialogueContext {
+    const playerStore = usePlayerStore()
+    return {
+      inventory: playerStore.inventory,
+      companions: companions.value,
+      choicesMade: choicesMade.value,
+      choiceConsequences: choiceConsequences.value,
+      interactedNPCs: interactedNPCs.value,
+      npcId,
+      playerClass: playerStore.player?.class ?? '',
+      playerAbilities: playerStore.player?.abilities ?? { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+      nimrodelFragments: nimrodelFragments.value,
+    }
+  }
+
+  function applyDialogueEffects(result: import('../engine/handlers/dialogueHandler').DialogueAdvanceResult) {
+    const playerStore = usePlayerStore()
+    if (!playerStore.player) return
+
+    for (const itemId of result.giveItemIds) {
+      const item = itemDb[itemId]
+      if (item) pushLogs(playerStore.addItem(item))
+    }
+    for (const itemId of result.takeItemIds) {
+      playerStore.removeItem(itemId)
+    }
+    if (result.xp) pushLogs(playerStore.addXp(result.xp))
+    if (result.gold) playerStore.player.gold += result.gold
+    if (result.healFull) playerStore.player.hp = playerStore.player.maxHp
+    for (const [key, val] of Object.entries(result.flags)) {
+      choiceConsequences.value[key] = val
+    }
+    if (result.nimrodelFragment) {
+      nimrodelFragments.value.add(result.nimrodelFragment)
+      log(`You have learned a fragment of Nimrodel's song.`, 'loot')
+      // If all 3 fragments, assemble
+      if (nimrodelFragments.value.size >= 3) {
+        const songItem = itemDb['nimrodel-song']
+        if (songItem && !playerStore.inventory.some(i => i.id === 'nimrodel-song')) {
+          pushLogs(playerStore.addItem(songItem))
+          log('The three fragments of the ancient lay weave together in your mind. You know the Song of Nimrodel.', 'loot')
+        }
+      }
+    }
+    if (result.presentChoiceId) {
+      const choice = allChoices[result.presentChoiceId]
+      if (choice) {
+        const choiceResult = presentChoice(choice)
+        pushLogs(choiceResult.logs)
+        activeChoice.value = choiceResult.activeChoice
+      }
+    }
+  }
+
   // ── NPC Talk/Trade ──────────────────────────────────────────
   function findNPCInRoom(target?: string) {
-    const npcIds = roomNPCs[currentRoomId.value]
+    const npcIds = allRoomNPCs[currentRoomId.value]
     if (!npcIds || npcIds.length === 0) return undefined
     if (target) {
       return npcIds
-        .map(id => npcs[id])
+        .map(id => allNPCs[id])
         .find(n => n && n.name.toLowerCase().includes(target.toLowerCase()))
     }
-    return npcs[npcIds[0]!]
+    return allNPCs[npcIds[0]!]
   }
 
   function handleTalk(cmd: ParsedCommand) {
@@ -993,7 +1123,7 @@ export const useGameStore = defineStore('game', () => {
         }
         companions.value.push(check.companion)
         // Remove NPC from room so they don't appear as static anymore
-        const npcList = roomNPCs[currentRoomId.value]
+        const npcList = allRoomNPCs[currentRoomId.value]
         if (npcList) {
           const idx = npcList.indexOf(npc.id)
           if (idx !== -1) npcList.splice(idx, 1)
@@ -1003,6 +1133,26 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
+    // ── Dialogue tree path ──
+    if (npc.dialogueTree) {
+      const ctx = buildDialogueContext(npc.id)
+      const result = startDialogue(npc, ctx)
+      pushLogs(result.logs)
+      if (result.activeDialogue) {
+        activeDialogue.value = result.activeDialogue
+      }
+      interactedNPCs.value.add(npc.id)
+
+      // After dialogue tree shown, offer recruitment if applicable
+      if (npc.recruitableCompanionId && interactedNPCs.value.has(npc.id) && !recruitableNPCsOffered.value.has(npc.id)) {
+        if (!companions.value.some(c => c.id === npc.recruitableCompanionId)) {
+          recruitableNPCsOffered.value.add(npc.id)
+        }
+      }
+      return
+    }
+
+    // ── Legacy flat dialogue path ──
     const result = talkToNPC(npc, isDark(), interactedNPCs.value.has(npc.id))
     pushLogs(result.logs)
 
@@ -1016,7 +1166,7 @@ export const useGameStore = defineStore('game', () => {
 
     // Ori's forbidden knowledge choice — triggers on second talk after interaction
     if (npc.id === 'ghost-of-ori' && interactedNPCs.value.has(npc.id) && !choicesMade.value['oris-knowledge']) {
-      const choice = choices['oris-knowledge']
+      const choice = allChoices['oris-knowledge']
       if (choice) {
         const choiceResult = presentChoice(choice)
         pushLogs(choiceResult.logs)
@@ -1104,11 +1254,10 @@ export const useGameStore = defineStore('game', () => {
   }
 
   // ── Puzzles ─────────────────────────────────────────────────
-  function findPuzzleInRoom(): typeof puzzles[string] | undefined {
-    const puzzleIds = roomPuzzles[currentRoomId.value]
+  function findPuzzleInRoom(): typeof allPuzzles[string] | undefined {
+    const puzzleIds = allRoomPuzzles[currentRoomId.value]
     if (!puzzleIds || puzzleIds.length === 0) return undefined
-    // Return first unsolved puzzle, or first puzzle
-    return puzzleIds.map(id => puzzles[id]).find(p => p && !solvedPuzzles.value.has(p.id)) || puzzles[puzzleIds[0]!]
+    return puzzleIds.map(id => allPuzzles[id]).find(p => p && !solvedPuzzles.value.has(p.id)) || allPuzzles[puzzleIds[0]!]
   }
 
   function handleSay(cmd: ParsedCommand) {
@@ -1293,6 +1442,27 @@ export const useGameStore = defineStore('game', () => {
 
   // ── Choices ──────────────────────────────────────────────
   function handleChoose(cmd: ParsedCommand) {
+    // ── Dialogue tree advancement (takes priority) ──
+    if (activeDialogue.value) {
+      const optionLetter = cmd.target?.toLowerCase()
+      if (!optionLetter) {
+        log('Choose which option? Type "choose A", "choose B", etc.', 'error')
+        return
+      }
+      const npc = allNPCs[activeDialogue.value.npcId]
+      if (!npc) { activeDialogue.value = null; return }
+
+      const ctx = buildDialogueContext(npc.id)
+      const result = advanceDialogue(npc, activeDialogue.value, optionLetter, ctx)
+      pushLogs(result.logs)
+      activeDialogue.value = result.activeDialogue
+      applyDialogueEffects(result)
+      if (result.ended) {
+        interactedNPCs.value.add(npc.id)
+      }
+      return
+    }
+
     if (!activeChoice.value) {
       log('There is no choice to make right now.', 'error')
       return
@@ -1541,6 +1711,9 @@ export const useGameStore = defineStore('game', () => {
     choiceConsequences,
     removedEnemies,
     addedEnemies,
+    currentAct,
+    activeDialogue,
+    nimrodelFragments,
     getDifficultyMultipliers,
     initGame,
     handleCommand,

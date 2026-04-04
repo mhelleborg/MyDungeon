@@ -33,6 +33,7 @@ export function serialize(): SaveData {
 
     // gameStore
     phase: gameStore.phase,
+    currentAct: gameStore.currentAct,
     difficulty: gameStore.difficulty,
     currentRoomId: gameStore.currentRoomId,
     gameLog: gameStore.gameLog.slice(-MAX_LOG_ENTRIES),
@@ -56,6 +57,8 @@ export function serialize(): SaveData {
     seenEncounters: setToArray(gameStore.seenEncounters),
     activeEncounter: gameStore.activeEncounter ? JSON.parse(JSON.stringify(gameStore.activeEncounter)) : null,
     activeChoice: gameStore.activeChoice ? JSON.parse(JSON.stringify(gameStore.activeChoice)) : null,
+    activeDialogue: gameStore.activeDialogue ? JSON.parse(JSON.stringify(gameStore.activeDialogue)) : null,
+    nimrodelFragments: [...gameStore.nimrodelFragments],
     choicesMade: { ...gameStore.choicesMade },
     choiceConsequences: { ...gameStore.choiceConsequences },
     removedEnemies: { ...gameStore.removedEnemies },
@@ -106,6 +109,7 @@ export function deserialize(data: SaveData): void {
 
   // gameStore
   gameStore.phase = data.phase
+  gameStore.currentAct = data.currentAct ?? 'moria'
   gameStore.difficulty = data.difficulty
   gameStore.currentRoomId = data.currentRoomId
   gameStore.gameLog = data.gameLog
@@ -129,6 +133,8 @@ export function deserialize(data: SaveData): void {
   gameStore.seenEncounters = arrayToSet(data.seenEncounters ?? [])
   gameStore.activeEncounter = data.activeEncounter ?? null
   gameStore.activeChoice = data.activeChoice ?? null
+  gameStore.activeDialogue = data.activeDialogue ?? null
+  gameStore.nimrodelFragments = new Set(data.nimrodelFragments ?? [])
   gameStore.choicesMade = data.choicesMade ?? {}
   gameStore.choiceConsequences = data.choiceConsequences ?? {}
   gameStore.removedEnemies = data.removedEnemies ?? {}

@@ -105,9 +105,13 @@ export function parseCommand(input: string): ParsedCommand {
     return { type: 'search', target: rest || undefined, raw }
   }
 
-  // Choose (branching choices)
+  // Choose (branching choices and dialogue options)
   if (verb === 'choose' || verb === 'decide') {
     return { type: 'choose', target: rest || undefined, raw }
+  }
+  // Single-letter shortcuts for dialogue/choice options
+  if ((verb === 'a' || verb === 'b' || verb === 'c' || verb === 'd') && !rest) {
+    return { type: 'choose', target: verb, raw }
   }
 
   // Craft
