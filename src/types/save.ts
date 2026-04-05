@@ -4,13 +4,15 @@ import type { GameLogEntry } from './command'
 import type { CombatEnemy } from './character'
 import type { Companion } from './companion'
 import type { GamePhase } from '../stores/gameStore'
+import type { ActId } from '../stores/gameStore'
 import type { DifficultyLevel } from './difficulty'
 import type { PlayerClass } from './character'
 import type { BossPhase } from '../engine/handlers/bossHandler'
 import type { ActiveEncounter } from './encounter'
 import type { ActiveChoice } from './choice'
+import type { ActiveDialogue } from './dialogue'
 
-export const SAVE_VERSION = 2
+export const SAVE_VERSION = 3
 export const SAVE_KEY = 'moria-save'
 
 export interface SaveData {
@@ -23,6 +25,7 @@ export interface SaveData {
 
   // gameStore
   phase: GamePhase
+  currentAct: ActId
   difficulty: DifficultyLevel
   currentRoomId: string
   gameLog: GameLogEntry[]
@@ -46,6 +49,8 @@ export interface SaveData {
   seenEncounters: string[]
   activeEncounter: ActiveEncounter | null
   activeChoice: ActiveChoice | null
+  activeDialogue: ActiveDialogue | null
+  nimrodelFragments: string[]
   choicesMade: Record<string, string>
   choiceConsequences: Record<string, boolean>
   removedEnemies: Record<string, number>
