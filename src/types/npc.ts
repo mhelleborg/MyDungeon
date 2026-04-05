@@ -1,3 +1,5 @@
+import type { DialogueTree } from './dialogue'
+
 export interface TradeOffer {
   itemId: string
   cost: number
@@ -7,7 +9,10 @@ export interface NPC {
   id: string
   name: string
   description: string
+  /** Legacy flat dialogue — used when dialogueTree is absent */
   dialogue: string[]
+  /** Branching dialogue tree — takes precedence over flat dialogue when present */
+  dialogueTree?: DialogueTree
   tradeOffers?: TradeOffer[]
   questReward?: {
     itemId: string
