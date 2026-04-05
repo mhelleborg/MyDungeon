@@ -21,6 +21,7 @@ import { playSound } from '../engine/audio'
 import { checkRecruitment, rollCompanionComment } from '../engine/handlers/companionHandler'
 import { difficulty, currentRoomId, roomItems, companions, getDifficultyMultipliers, dropItemToGround } from './gameContext'
 import { SAVE_KEY } from '../types/save'
+import { saveGame } from '../engine/saveLoad'
 import { encounters as moriaEncounters } from '../data/encounters'
 import {
   shouldTriggerEncounter,
@@ -507,6 +508,11 @@ export const useGameStore = defineStore('game', () => {
       })
       pushLogs(result.logs)
       applyLightState(result.newState)
+    }
+
+    // Auto-save after state-changing commands
+    if (!['help', 'stats', 'inventory', 'map', 'load'].includes(cmd.type)) {
+      saveGame()
     }
   }
 
