@@ -161,7 +161,7 @@ const elanorTree: DialogueTree = {
   },
 }
 
-const bombурTree: DialogueTree = {
+const bomburTree: DialogueTree = {
   rootNodeId: 'bombur-greeting',
   nodes: {
     'bombur-greeting': {
@@ -499,7 +499,7 @@ export const npcs: Record<string, NPC> = {
       '"Those levers on the wall — flame, water, and hammer. I\'ve been trying to crack the sequence for weeks."',
       '"I\'ve got goods if you\'ve got gold. A smith never travels without his wares!"',
     ],
-    dialogueTree: bombурTree,
+    dialogueTree: bomburTree,
     tradeOffers: [
       { itemId: 'longsword', cost: 20 },
       { itemId: 'chain-mail', cost: 35 },

@@ -104,6 +104,6 @@ export const lothlorienChoices: Record<string, Choice> = {
           'This is not your war to choose — or perhaps it is, but not from Lothlórien. You will take the gifts Galadriel offers and go where your feet lead you. The road is long and the world is wide.',
       },
     ],
-    roomId: 'galdriel-bower',
+    roomId: 'galadriel-bower',
   },
 }
