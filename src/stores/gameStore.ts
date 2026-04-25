@@ -173,15 +173,17 @@ export const useGameStore = defineStore('game', () => {
   }
 
   // ── Init ───────────────────────────────────────────────────
-  function initGame() {
+  function initGame(startAct: ActId = 'moria') {
     const combatStore = useCombatStore()
     if (combatStore.inCombat) combatStore.endCombat()
+
+    const startingRoomId = startAct === 'lothlorien' ? 'dimrill-dale' : STARTING_ROOM
 
     gameLog.value = []
     visitedRooms.value = new Set()
     clearedRooms.value = new Set()
     disarmedTraps.value = new Set()
-    currentRoomId.value = STARTING_ROOM
+    currentRoomId.value = startingRoomId
     previousRoomId.value = null
     restedRooms.value = new Set()
     interactedNPCs.value = new Set()
@@ -199,7 +201,7 @@ export const useGameStore = defineStore('game', () => {
     choiceConsequences.value = {}
     removedEnemies.value = {}
     addedEnemies.value = {}
-    currentAct.value = 'moria'
+    currentAct.value = startAct
     activeDialogue.value = null
     nimrodelFragments.value = new Set()
     applyLightState({ hasLight: false, turnsRemaining: 0, permanent: false })
@@ -225,7 +227,7 @@ export const useGameStore = defineStore('game', () => {
       Object.keys(rooms).length + Object.keys(lothlorienRooms).length,
     )
 
-    enterRoom(STARTING_ROOM)
+    enterRoom(startingRoomId)
   }
 
   // ── Room entry ─────────────────────────────────────────────

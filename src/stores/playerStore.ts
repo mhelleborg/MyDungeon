@@ -8,6 +8,7 @@ import { createPlayer } from '../data/player-classes'
 import { rollDice } from '../engine/dice'
 import type { GameLogEntry } from '../types/command'
 import { playSound } from '../engine/audio'
+import type { ActId } from './gameStore'
 
 export const usePlayerStore = defineStore('player', () => {
   const player = ref<Player | null>(null)
@@ -15,7 +16,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   const isAlive = computed(() => player.value !== null && player.value.hp > 0)
 
-  function initPlayer(name: string, playerClass: PlayerClass, extraPotions = 0) {
+  function initPlayer(name: string, playerClass: PlayerClass, extraPotions = 0, startAct: ActId = 'moria') {
     player.value = createPlayer(name, playerClass)
     inventory.value = []
 
@@ -42,6 +43,47 @@ export const usePlayerStore = defineStore('player', () => {
       for (let i = 0; i < Math.abs(extraPotions); i++) {
         removeItem('healing-potion')
       }
+    }
+
+    if (startAct === 'lothlorien') {
+      applyMoriaProgression(playerClass)
+    }
+  }
+
+  // Grants the rewards a player would have earned passing through Moria:
+  // a level boost, additional gear and supplies, and Moria mementos.
+  function applyMoriaProgression(playerClass: PlayerClass) {
+    if (!player.value) return
+
+    player.value.gold += 50
+
+    player.value.xp += 1500
+    while (player.value.xp >= player.value.xpToNext) {
+      player.value.level++
+      player.value.xp -= player.value.xpToNext
+      player.value.xpToNext = Math.floor(player.value.xpToNext * 1.5)
+      const hpGain = Math.max(1, rollDice('1d8+0').total + getModifier(player.value.abilities.con))
+      player.value.maxHp += hpGain
+    }
+    player.value.hp = player.value.maxHp
+
+    const moriaLoot: Record<PlayerClass, string[]> = {
+      'ranger': ['plate-armor', 'elven-dagger', 'healing-potion', 'healing-potion', 'miruvor', 'balin-tome', 'watcher-pearl'],
+      'wizard': ['glamdring', 'healing-potion', 'healing-potion', 'miruvor', 'balin-tome', 'watcher-pearl'],
+      'dwarf-warrior': ['dwarven-warhammer', 'dwarf-shield', 'healing-potion', 'healing-potion', 'miruvor', 'balin-tome', 'watcher-pearl'],
+    }
+
+    for (const itemId of moriaLoot[playerClass]) {
+      const item = itemDb[itemId]
+      if (item) inventory.value.push({ ...item, quantity: item.consumable ? 1 : undefined })
+    }
+
+    if (playerClass === 'ranger') {
+      equipItem('plate-armor')
+    } else if (playerClass === 'wizard') {
+      equipItem('glamdring')
+    } else if (playerClass === 'dwarf-warrior') {
+      equipItem('dwarven-warhammer')
     }
   }
 

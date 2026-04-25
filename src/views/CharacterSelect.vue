@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import type { PlayerClass } from '../types/character'
 import type { DifficultyLevel } from '../types/difficulty'
 import { difficultySettings } from '../types/difficulty'
-import { useGameStore } from '../stores/gameStore'
+import { useGameStore, type ActId } from '../stores/gameStore'
 import { usePlayerStore } from '../stores/playerStore'
 
 const gameStore = useGameStore()
@@ -12,6 +12,12 @@ const playerStore = usePlayerStore()
 const name = ref('')
 const selectedClass = ref<PlayerClass>('ranger')
 const selectedDifficulty = ref<DifficultyLevel>('normal')
+const selectedAct = ref<ActId>('moria')
+
+const acts: { id: ActId; label: string; desc: string }[] = [
+  { id: 'moria', label: 'Mines of Moria (Act I)', desc: 'Begin at the West-gate. The full journey through the dark.' },
+  { id: 'lothlorien', label: 'Lothlórien (Act II)', desc: 'Skip Moria. Start in Dimrill Dale, level-boosted with Moria\'s spoils.' },
+]
 
 const difficulties = [
   { id: 'easy' as DifficultyLevel, label: 'Easy', desc: 'Weaker enemies, more loot, bonus healing. For those who want to enjoy the story.' },
@@ -47,9 +53,9 @@ function startAdventure() {
   const playerName = name.value.trim() || 'Adventurer'
   gameStore.difficulty = selectedDifficulty.value
   const multipliers = difficultySettings[selectedDifficulty.value]
-  playerStore.initPlayer(playerName, selectedClass.value, multipliers.extraPotions)
+  playerStore.initPlayer(playerName, selectedClass.value, multipliers.extraPotions, selectedAct.value)
   gameStore.phase = 'playing'
-  gameStore.initGame()
+  gameStore.initGame(selectedAct.value)
 }
 </script>
 
@@ -88,6 +94,25 @@ function startAdventure() {
           <p class="text-moria-text text-xs sm:text-sm mb-1">{{ cls.desc }}</p>
           <p class="text-moria-info text-[10px] sm:text-xs font-mono">{{ cls.stats }}</p>
         </button>
+      </div>
+
+      <!-- Starting act selection -->
+      <div class="mb-6 sm:mb-8">
+        <label class="text-moria-info text-xs block mb-2">STARTING POINT</label>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <button
+            v-for="act in acts"
+            :key="act.id"
+            @click="selectedAct = act.id"
+            class="flex-1 p-2.5 sm:p-3 border rounded transition-colors cursor-pointer text-center"
+            :class="selectedAct === act.id
+              ? 'border-moria-highlight bg-moria-highlight/10'
+              : 'border-moria-border bg-moria-panel/30 hover:border-moria-border/80'"
+          >
+            <span class="text-moria-highlight font-bold text-sm">{{ act.label }}</span>
+            <p class="text-moria-info text-xs mt-1">{{ act.desc }}</p>
+          </button>
+        </div>
       </div>
 
       <!-- Difficulty selection -->
