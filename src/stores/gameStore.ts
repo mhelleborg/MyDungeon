@@ -71,6 +71,8 @@ export const useGameStore = defineStore('game', () => {
   // difficulty, currentRoomId, roomItems, companions → imported from gameContext
   const gameLog = ref<GameLogEntry[]>([])
   const visitedRooms = ref<Set<string>>(new Set())
+  /** Last 3 rooms visited before the current one (oldest → newest). */
+  const recentPath = ref<string[]>([])
   const clearedRooms = ref<Set<string>>(new Set())
   const disarmedTraps = ref<Set<string>>(new Set())
   const hasLight = ref(false)
@@ -164,6 +166,14 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  function pushRecentPath(roomId: string) {
+    if (!roomId) return
+    const idx = recentPath.value.indexOf(roomId)
+    if (idx !== -1) recentPath.value.splice(idx, 1)
+    recentPath.value.push(roomId)
+    if (recentPath.value.length > 3) recentPath.value.shift()
+  }
+
   function markRoomCleared() {
     const combatStore = useCombatStore()
     if (!combatStore.inCombat) {
@@ -185,6 +195,7 @@ export const useGameStore = defineStore('game', () => {
     disarmedTraps.value = new Set()
     currentRoomId.value = startingRoomId
     previousRoomId.value = null
+    recentPath.value = []
     restedRooms.value = new Set()
     interactedNPCs.value = new Set()
     solvedPuzzles.value = new Set()
@@ -246,6 +257,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     if (currentRoomId.value !== roomId) {
+      pushRecentPath(currentRoomId.value)
       previousRoomId.value = currentRoomId.value
       activeEncounter.value = null // clear encounter on room change
       activeChoice.value = null   // clear choice on room change
@@ -998,6 +1010,7 @@ export const useGameStore = defineStore('game', () => {
     if (stealthResult.success) {
       useStatsStore().recordSneakSuccess()
       // Enter without triggering combat
+      pushRecentPath(currentRoomId.value)
       previousRoomId.value = currentRoomId.value
       currentRoomId.value = moveCheck.exit.targetRoomId
       visitedRooms.value.add(moveCheck.exit.targetRoomId)
@@ -1022,6 +1035,7 @@ export const useGameStore = defineStore('game', () => {
       }
     } else {
       // Enter room with surprise round for enemies
+      pushRecentPath(currentRoomId.value)
       previousRoomId.value = currentRoomId.value
       currentRoomId.value = moveCheck.exit.targetRoomId
       visitedRooms.value.add(moveCheck.exit.targetRoomId)
@@ -1696,6 +1710,7 @@ export const useGameStore = defineStore('game', () => {
     currentRoom,
     gameLog,
     visitedRooms,
+    recentPath,
     clearedRooms,
     roomItems,
     disarmedTraps,

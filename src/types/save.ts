@@ -30,6 +30,7 @@ export interface SaveData {
   currentRoomId: string
   gameLog: GameLogEntry[]
   visitedRooms: string[]
+  recentPath: string[]
   clearedRooms: string[]
   roomItems: Record<string, string[]>
   disarmedTraps: string[]

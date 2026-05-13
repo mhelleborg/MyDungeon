@@ -38,6 +38,7 @@ export function serialize(): SaveData {
     currentRoomId: gameStore.currentRoomId,
     gameLog: gameStore.gameLog.slice(-MAX_LOG_ENTRIES),
     visitedRooms: setToArray(gameStore.visitedRooms),
+    recentPath: [...gameStore.recentPath],
     clearedRooms: setToArray(gameStore.clearedRooms),
     roomItems: JSON.parse(JSON.stringify(gameStore.roomItems)),
     disarmedTraps: setToArray(gameStore.disarmedTraps),
@@ -114,6 +115,7 @@ export function deserialize(data: SaveData): void {
   gameStore.currentRoomId = data.currentRoomId
   gameStore.gameLog = data.gameLog
   gameStore.visitedRooms = arrayToSet(data.visitedRooms)
+  gameStore.recentPath = data.recentPath ?? []
   gameStore.clearedRooms = arrayToSet(data.clearedRooms)
   gameStore.roomItems = data.roomItems
   gameStore.disarmedTraps = arrayToSet(data.disarmedTraps)
