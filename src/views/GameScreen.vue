@@ -8,6 +8,7 @@ import InventoryPanel from '../components/InventoryPanel.vue'
 import CombatLog from '../components/CombatLog.vue'
 import MiniMap from '../components/MiniMap.vue'
 import AchievementToast from '../components/AchievementToast.vue'
+import FloaterLayer from '../components/FloaterLayer.vue'
 import { useGameStore } from '../stores/gameStore'
 import { useCombatStore } from '../stores/combatStore'
 import { usePlayerStore } from '../stores/playerStore'
@@ -15,6 +16,7 @@ import { useStatsStore } from '../stores/statsStore'
 import { formatElapsed } from '../engine/achievements'
 import { isSoundEnabled, setSoundEnabled } from '../engine/audio'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
+import { useFloaters } from '../composables/useFloaters'
 import { computed, ref, watch } from 'vue'
 
 const gameStore = useGameStore()
@@ -96,6 +98,24 @@ const mobileTab = ref<MobileTab>(null)
 function toggleMobileTab(tab: MobileTab) {
   mobileTab.value = mobileTab.value === tab ? null : tab
 }
+
+// Floating numbers anchored to the header HP bar
+const playerHpAnchor = ref<HTMLElement | null>(null)
+const { spawn: spawnFloater } = useFloaters()
+let lastSeenHitIndex = combatStore.hitEvents.length
+
+watch(
+  () => combatStore.hitEvents.length,
+  (len) => {
+    if (len < lastSeenHitIndex) lastSeenHitIndex = 0
+    const events = combatStore.hitEvents.slice(lastSeenHitIndex)
+    lastSeenHitIndex = len
+    for (const ev of events) {
+      if (ev.targetId !== 'player') continue
+      spawnFloater(playerHpAnchor.value, { value: ev.value, kind: ev.kind })
+    }
+  },
+)
 </script>
 
 <template>
@@ -103,7 +123,7 @@ function toggleMobileTab(tab: MobileTab) {
     <!-- Header -->
     <header class="flex items-center px-3 py-1.5 md:px-4 md:py-2 gap-2 border-b border-moria-border bg-moria-panel/50 shrink-0">
       <h1 class="text-sm md:text-lg font-bold text-moria-highlight tracking-wider whitespace-nowrap">MORIA</h1>
-      <div v-if="playerStore.player" class="flex items-center gap-1.5 flex-1 min-w-0">
+      <div v-if="playerStore.player" ref="playerHpAnchor" class="flex items-center gap-1.5 flex-1 min-w-0">
         <span class="text-moria-info text-[10px] md:text-xs">HP</span>
         <div class="flex-1 max-w-32 h-2 bg-moria-bg rounded overflow-hidden">
           <div :class="hpBarColor" class="h-full transition-all duration-300" :style="{ width: hpPercent + '%' }"></div>
@@ -190,6 +210,7 @@ function toggleMobileTab(tab: MobileTab) {
     ></div>
 
     <AchievementToast />
+    <FloaterLayer />
 
     <!-- Game Over overlay -->
     <div v-if="gameStore.phase === 'game-over'" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 overflow-y-auto p-4">

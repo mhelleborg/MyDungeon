@@ -16,6 +16,17 @@ import { getDifficultyMultipliers, companions, dropItemToGround } from './gameCo
 import { tickStatusEffects, cleanupExpiredEffects, getStatusAttackBonus, getStatusAcBonus, applyStatusEffect } from '../engine/statusEffects'
 import { rollPlayerCritical, rollPlayerFumble, rollEnemyCritical, rollEnemyFumble } from '../engine/criticalEffects'
 
+export type HitEventKind = 'damage-out' | 'damage-in' | 'crit' | 'miss' | 'heal' | 'magic'
+
+export interface HitEvent {
+  id: number
+  targetId: string
+  value: number | string
+  kind: HitEventKind
+}
+
+const HIT_EVENTS_CAP = 50
+
 export const useCombatStore = defineStore('combat', () => {
   const inCombat = ref(false)
   const combatEnemies = ref<CombatEnemy[]>([])
@@ -25,6 +36,15 @@ export const useCombatStore = defineStore('combat', () => {
   const bossFallBack = ref(false)
   const lastCritical = ref(false)
   const skipNextEnemyTurn = ref(false)
+  const hitEvents = ref<HitEvent[]>([])
+  let hitEventSeq = 0
+
+  function pushHitEvent(targetId: string, value: number | string, kind: HitEventKind) {
+    hitEvents.value.push({ id: ++hitEventSeq, targetId, value, kind })
+    if (hitEvents.value.length > HIT_EVENTS_CAP) {
+      hitEvents.value.splice(0, hitEvents.value.length - HIT_EVENTS_CAP)
+    }
+  }
 
   const livingEnemies = computed(() => combatEnemies.value.filter(e => e.hp > 0))
   const combatOver = computed(() => inCombat.value && livingEnemies.value.length === 0)
@@ -109,6 +129,7 @@ export const useCombatStore = defineStore('combat', () => {
         const fire = rollFireDamage()
         logs.push(...fire.logs)
         playerStore.player.hp -= fire.damage
+        pushHitEvent('player', fire.damage, 'damage-in')
         if (playerStore.player.hp <= 0) {
           playerStore.player.hp = 0
           logs.push({ text: 'You have fallen in the darkness of Moria...', type: 'narrative', timestamp: Date.now() })
@@ -127,6 +148,7 @@ export const useCombatStore = defineStore('combat', () => {
     if (effectResult.damage > 0) {
       playerStore.player.hp -= effectResult.damage
       useStatsStore().recordDamageTaken(effectResult.damage)
+      pushHitEvent('player', effectResult.damage, 'damage-in')
       if (playerStore.player.hp <= 0) {
         playerStore.player.hp = 0
         logs.push({ text: 'You have fallen in the darkness of Moria...', type: 'narrative', timestamp: Date.now() })
@@ -214,6 +236,12 @@ export const useCombatStore = defineStore('combat', () => {
     const statsStore = useStatsStore()
     lastCritical.value = result.hit && result.critical
 
+    if (result.hit) {
+      pushHitEvent(target.instanceId, result.damage, result.critical ? 'crit' : 'damage-out')
+    } else {
+      pushHitEvent(target.instanceId, 'miss', 'miss')
+    }
+
     // Critical hit bonus effects
     if (result.hit && result.critical) {
       const critEffect = rollPlayerCritical()
@@ -222,6 +250,7 @@ export const useCombatStore = defineStore('combat', () => {
         target.hp -= critEffect.bonusDamage
         statsStore.recordDamageDealt(critEffect.bonusDamage)
         logs.push({ text: `(+${critEffect.bonusDamage} bonus damage!)`, type: 'combat', timestamp: Date.now() })
+        pushHitEvent(target.instanceId, critEffect.bonusDamage, 'damage-out')
       }
       if (critEffect.statusEffect === 'stunned' && target.hp > 0) {
         logs.push({ text: `${target.name} is dazed by the blow!`, type: 'combat', timestamp: Date.now() })
@@ -236,6 +265,7 @@ export const useCombatStore = defineStore('combat', () => {
       if (fumble.selfDamage > 0) {
         playerStore.player.hp -= fumble.selfDamage
         statsStore.recordDamageTaken(fumble.selfDamage)
+        pushHitEvent('player', fumble.selfDamage, 'damage-in')
       }
       if (fumble.loseNextTurn) {
         playerStore.player.fumblePenalty = true
@@ -309,6 +339,7 @@ export const useCombatStore = defineStore('combat', () => {
     }
 
     const target = livingEnemies.value[0]
+    const hpBeforeCast = playerStore.player.hp
     const result = castSpell(playerStore.player, spell.id, target)
     logs.push(...result.logs)
 
@@ -316,6 +347,11 @@ export const useCombatStore = defineStore('combat', () => {
     if (result.damage > 0) {
       statsStore.recordDamageDealt(result.damage)
       playSound('crit')
+      if (target) pushHitEvent(target.instanceId, result.damage, 'magic')
+    }
+    const healDelta = playerStore.player.hp - hpBeforeCast
+    if (healDelta > 0) {
+      pushHitEvent('player', healDelta, 'heal')
     }
 
     if (target && target.hp <= 0) {
@@ -455,6 +491,7 @@ export const useCombatStore = defineStore('combat', () => {
 
       if (result.hit) {
         statsStore.recordDamageTaken(result.damage)
+        pushHitEvent('player', result.damage, 'damage-in')
 
         // Enemy critical hit bonus effects
         if (result.critical) {
@@ -463,6 +500,7 @@ export const useCombatStore = defineStore('combat', () => {
           if (critEffect.bonusDamage > 0) {
             playerStore.player.hp -= critEffect.bonusDamage
             statsStore.recordDamageTaken(critEffect.bonusDamage)
+            pushHitEvent('player', critEffect.bonusDamage, 'damage-in')
           }
           if (critEffect.statusEffect) {
             const applied = applyStatusEffect(playerStore.player.statusEffects, critEffect.statusEffect)
@@ -602,6 +640,8 @@ export const useCombatStore = defineStore('combat', () => {
     isBossFight,
     lastCritical,
     skipNextEnemyTurn,
+    hitEvents,
+    pushHitEvent,
     startCombat,
     doPlayerAttack,
     doPlayerCast,

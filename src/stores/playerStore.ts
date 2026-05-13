@@ -9,6 +9,7 @@ import { rollDice } from '../engine/dice'
 import type { GameLogEntry } from '../types/command'
 import { playSound } from '../engine/audio'
 import type { ActId } from './gameStore'
+import { useCombatStore } from './combatStore'
 
 export const usePlayerStore = defineStore('player', () => {
   const player = ref<Player | null>(null)
@@ -150,6 +151,9 @@ export const usePlayerStore = defineStore('player', () => {
       player.value.hp = Math.min(player.value.maxHp, player.value.hp + scaledHeal)
       const healed = player.value.hp - oldHp
       logs.push({ text: `You drink the ${item.name} and recover ${healed} HP. (${player.value.hp}/${player.value.maxHp})`, type: 'info', timestamp: Date.now() })
+      if (healed > 0) {
+        useCombatStore().pushHitEvent('player', healed, 'heal')
+      }
       removeItem(itemId)
     } else {
       logs.push({ text: `You can't use ${item.name} that way.`, type: 'error', timestamp: Date.now() })

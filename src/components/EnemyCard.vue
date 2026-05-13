@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { CombatEnemy } from '../types/character'
+import { useCombatStore } from '../stores/combatStore'
+import { useFloaters } from '../composables/useFloaters'
 
 const props = defineProps<{
   enemy: CombatEnemy
@@ -9,6 +11,24 @@ const props = defineProps<{
 const emit = defineEmits<{
   examine: [name: string]
 }>()
+
+const combatStore = useCombatStore()
+const { spawn: spawnFloater } = useFloaters()
+const cardRoot = ref<HTMLElement | null>(null)
+let lastSeenHitIndex = combatStore.hitEvents.length
+
+watch(
+  () => combatStore.hitEvents.length,
+  (len) => {
+    if (len < lastSeenHitIndex) lastSeenHitIndex = 0
+    const events = combatStore.hitEvents.slice(lastSeenHitIndex)
+    lastSeenHitIndex = len
+    for (const ev of events) {
+      if (ev.targetId !== props.enemy.instanceId) continue
+      spawnFloater(cardRoot.value, { value: ev.value, kind: ev.kind })
+    }
+  },
+)
 
 const hpPercent = computed(() => Math.max(0, (props.enemy.hp / props.enemy.maxHp) * 100))
 
@@ -50,6 +70,7 @@ const isDying = computed(() => props.enemy.hp <= 0)
 
 <template>
   <div
+    ref="cardRoot"
     class="py-1 px-2 rounded transition-all duration-200"
     :class="{
       'enemy-hit': isHit,

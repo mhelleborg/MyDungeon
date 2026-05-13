@@ -1,10 +1,29 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useCombatStore } from '../stores/combatStore'
+import { useFloaters } from '../composables/useFloaters'
 
 const combatStore = useCombatStore()
+const { spawn: spawnFloater } = useFloaters()
+const bossAnchor = ref<HTMLElement | null>(null)
+let lastSeenHitIndex = combatStore.hitEvents.length
 
 const balrog = computed(() => combatStore.livingEnemies.find(e => e.id === 'balrog'))
+
+watch(
+  () => combatStore.hitEvents.length,
+  (len) => {
+    if (len < lastSeenHitIndex) lastSeenHitIndex = 0
+    const events = combatStore.hitEvents.slice(lastSeenHitIndex)
+    lastSeenHitIndex = len
+    const id = balrog.value?.instanceId
+    if (!id) return
+    for (const ev of events) {
+      if (ev.targetId !== id) continue
+      spawnFloater(bossAnchor.value, { value: ev.value, kind: ev.kind })
+    }
+  },
+)
 
 const hpPercent = computed(() => {
   if (!balrog.value) return 0
@@ -31,7 +50,7 @@ const barClass = computed(() => {
 </script>
 
 <template>
-  <div v-if="combatStore.isBossFight && balrog" class="mt-3 p-3 border border-red-500/60 rounded bg-red-900/20">
+  <div v-if="combatStore.isBossFight && balrog" ref="bossAnchor" class="mt-3 p-3 border border-red-500/60 rounded bg-red-900/20">
     <div class="flex justify-between items-center mb-1">
       <span class="text-red-400 font-bold text-sm tracking-wider">{{ phaseName }}</span>
       <span class="text-moria-text text-xs font-mono">{{ balrog.hp }}/{{ balrog.maxHp }}</span>
