@@ -3,12 +3,12 @@ import { ref, computed } from 'vue'
 import type { Player, PlayerClass } from '../types/character'
 import { getModifier } from '../types/character'
 import type { Item } from '../types/item'
-import { items as itemDb } from '../data/items'
+import { itemDb } from '../data/world'
 import { createPlayer } from '../data/player-classes'
 import { rollDice } from '../engine/dice'
 import type { GameLogEntry } from '../types/command'
 import { playSound } from '../engine/audio'
-import type { ActId } from './gameStore'
+import type { RegionId } from '../types/region'
 import { useCombatStore } from './combatStore'
 
 export const usePlayerStore = defineStore('player', () => {
@@ -17,7 +17,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   const isAlive = computed(() => player.value !== null && player.value.hp > 0)
 
-  function initPlayer(name: string, playerClass: PlayerClass, extraPotions = 0, startAct: ActId = 'moria') {
+  function initPlayer(name: string, playerClass: PlayerClass, extraPotions = 0, startRegion: RegionId = 'moria') {
     player.value = createPlayer(name, playerClass)
     inventory.value = []
 
@@ -46,7 +46,7 @@ export const usePlayerStore = defineStore('player', () => {
       }
     }
 
-    if (startAct === 'lothlorien') {
+    if (startRegion === 'lothlorien') {
       applyMoriaProgression(playerClass)
     }
   }

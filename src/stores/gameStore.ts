@@ -1,8 +1,24 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { GameLogEntry, ParsedCommand } from '../types/command'
-import { rooms, getRoom, STARTING_ROOM } from '../data/rooms'
-import { items as moriaItems } from '../data/items'
+import type { Room } from '../types/room'
+import type { RegionId } from '../types/region'
+import {
+  world,
+  getRegion,
+  regionOfRoom,
+  findRoom,
+  totalRoomCount,
+  itemDb,
+  allNPCs,
+  allRoomNPCs,
+  allChoices,
+  allPuzzles,
+  allRoomPuzzles,
+  allRoomInteractions,
+  encounterPool,
+  DEFAULT_REGION,
+} from '../data/world'
 import { parseCommand } from '../engine/commandParser'
 import { rollAmbientEvent } from '../engine/ambientEvents'
 import { validateMove } from '../engine/handlers/moveHandler'
@@ -13,16 +29,14 @@ import { attemptFlee, attemptStealth } from '../engine/handlers/fleeHandler'
 import { canRest, resolveRest } from '../engine/handlers/restHandler'
 import { talkToNPC, listTradeOffers, buyFromNPC } from '../engine/handlers/npcHandler'
 import { attemptPuzzle, getPuzzleHint } from '../engine/handlers/puzzleHandler'
-import { roomInteractions, trapDestroyText } from '../data/roomInteractions'
+import { trapDestroyText } from '../data/roomInteractions'
 import { examineInteraction, resolveSearch } from '../engine/handlers/interactHandler'
-import { npcs, roomNPCs } from '../data/npcs'
-import { puzzles, roomPuzzles } from '../data/puzzles'
+import { eligibleRoomEvents } from '../engine/handlers/roomEventHandler'
 import { playSound } from '../engine/audio'
 import { checkRecruitment, rollCompanionComment } from '../engine/handlers/companionHandler'
 import { difficulty, currentRoomId, roomItems, companions, getDifficultyMultipliers, dropItemToGround } from './gameContext'
 import { SAVE_KEY } from '../types/save'
 import { saveGame } from '../engine/saveLoad'
-import { encounters as moriaEncounters } from '../data/encounters'
 import {
   shouldTriggerEncounter,
   selectEncounter,
@@ -39,31 +53,12 @@ import { useStatsStore } from './statsStore'
 import { listRecipes, tryCraft, craftedItems } from '../engine/crafting'
 import { applyStatusEffect } from '../engine/statusEffects'
 import type { ActiveChoice } from '../types/choice'
-import { choices } from '../data/choices'
 import { presentChoice, resolveChoice, type ChoiceResolutionResult } from '../engine/handlers/choiceHandler'
-// ── Act 2 imports ────────────────────────────────────────────────────────────
-import { lothlorienNPCs, lothlorienRoomNPCs } from '../data/lothlorienNPCs'
-import { lothlorienRooms, lothlorienRoomInteractions } from '../data/lothlorienRooms'
-import { lothlorienChoices } from '../data/lothlorienChoices'
-import { lothlorienPuzzles, lothlorienRoomPuzzles } from '../data/lothlorienPuzzles'
-import { lothlorienEncounters } from '../data/lothlorienEncounters'
-import { lothlorienItems } from '../data/lothlorienItems'
 import { startDialogue, advanceDialogue } from '../engine/handlers/dialogueHandler'
 import type { DialogueContext } from '../engine/handlers/dialogueHandler'
 import type { ActiveDialogue } from '../types/dialogue'
 
-// ── Unified lookups across acts ─────────────────────────────────────────────
-const itemDb: Record<string, import('../types/item').Item> = { ...moriaItems, ...lothlorienItems }
-const encounterPool = [...moriaEncounters, ...lothlorienEncounters]
-const allNPCs: Record<string, import('../types/npc').NPC> = { ...npcs, ...lothlorienNPCs }
-const allRoomNPCs: Record<string, string[]> = { ...roomNPCs, ...lothlorienRoomNPCs }
-const allChoices: Record<string, import('../types/choice').Choice> = { ...choices, ...lothlorienChoices }
-const allPuzzles: Record<string, import('../types/puzzle').Puzzle> = { ...puzzles, ...lothlorienPuzzles }
-const allRoomPuzzles: Record<string, string[]> = { ...roomPuzzles, ...lothlorienRoomPuzzles }
-const allRoomInteractions: Record<string, import('../data/roomInteractions').RoomInteraction[]> = { ...roomInteractions, ...lothlorienRoomInteractions }
-
 export type GamePhase = 'title' | 'character-select' | 'playing' | 'game-over' | 'victory'
-export type ActId = 'moria' | 'lothlorien'
 
 export const useGameStore = defineStore('game', () => {
   // ── State ──────────────────────────────────────────────────
@@ -96,18 +91,21 @@ export const useGameStore = defineStore('game', () => {
   const removedEnemies = ref<Record<string, number>>({})
   /** Enemies spawned into rooms by choice consequences */
   const addedEnemies = ref<Record<string, { enemyId: string; count: number }[]>>({})
-  /** Current act */
-  const currentAct = ref<ActId>('moria')
+  /** Region the player is currently in */
+  const currentRegionId = ref<RegionId>(DEFAULT_REGION)
+  /** Ids of once-only room events that have already fired */
+  const firedRoomEvents = ref<Set<string>>(new Set())
   /** Active branching dialogue */
   const activeDialogue = ref<ActiveDialogue | null>(null)
   /** Collected Nimrodel song fragments */
   const nimrodelFragments = ref<Set<string>>(new Set())
 
   const currentRoom = computed(() => lookupRoom(currentRoomId.value))
+  const currentRegion = computed(() => getRegion(currentRegionId.value))
 
   // ── Helpers ────────────────────────────────────────────────
   function lookupRoom(id: string) {
-    return getRoom(id) ?? lothlorienRooms[id]
+    return findRoom(id)
   }
 
   function log(text: string, type: GameLogEntry['type'] = 'narrative') {
@@ -183,11 +181,12 @@ export const useGameStore = defineStore('game', () => {
   }
 
   // ── Init ───────────────────────────────────────────────────
-  function initGame(startAct: ActId = 'moria') {
+  function initGame(startRegion: RegionId = DEFAULT_REGION) {
     const combatStore = useCombatStore()
     if (combatStore.inCombat) combatStore.endCombat()
 
-    const startingRoomId = startAct === 'lothlorien' ? 'dimrill-dale' : STARTING_ROOM
+    const region = getRegion(startRegion) ?? getRegion(DEFAULT_REGION)!
+    const startingRoomId = region.entryRoomId
 
     gameLog.value = []
     visitedRooms.value = new Set()
@@ -212,20 +211,18 @@ export const useGameStore = defineStore('game', () => {
     choiceConsequences.value = {}
     removedEnemies.value = {}
     addedEnemies.value = {}
-    currentAct.value = startAct
+    currentRegionId.value = region.id
+    firedRoomEvents.value = new Set()
     activeDialogue.value = null
     nimrodelFragments.value = new Set()
     applyLightState({ hasLight: false, turnsRemaining: 0, permanent: false })
 
     roomItems.value = {}
-    for (const [id, room] of Object.entries(rooms)) {
-      if (room.items && room.items.length > 0) {
-        roomItems.value[id] = [...room.items]
-      }
-    }
-    for (const [id, room] of Object.entries(lothlorienRooms)) {
-      if (room.items && room.items.length > 0) {
-        roomItems.value[id] = [...room.items]
+    for (const worldRegion of Object.values(world)) {
+      for (const [id, room] of Object.entries(worldRegion.rooms)) {
+        if (room.items && room.items.length > 0) {
+          roomItems.value[id] = [...room.items]
+        }
       }
     }
 
@@ -235,7 +232,7 @@ export const useGameStore = defineStore('game', () => {
     statsStore.initStats(
       playerStore.player!.class,
       difficulty.value,
-      Object.keys(rooms).length + Object.keys(lothlorienRooms).length,
+      totalRoomCount(),
     )
 
     enterRoom(startingRoomId)
@@ -249,11 +246,15 @@ export const useGameStore = defineStore('game', () => {
       return
     }
 
-    // Act transition: entering a Lothlórien room switches the act
-    if (lothlorienRooms[roomId] && currentAct.value === 'moria') {
-      currentAct.value = 'lothlorien'
-      log('— Act II: Lothlórien —', 'system')
-      log('You leave the darkness of Moria behind. The world opens before you in golden light.', 'narrative')
+    // Region transition: entering a room that belongs to another region
+    const roomRegionId = regionOfRoom(roomId)
+    if (roomRegionId && roomRegionId !== currentRegionId.value) {
+      const region = getRegion(roomRegionId)!
+      const firstVisit = ![...visitedRooms.value].some(id => regionOfRoom(id) === roomRegionId)
+      currentRegionId.value = roomRegionId
+      if (firstVisit && region.arrivalLogs) {
+        for (const line of region.arrivalLogs) log(line.text, line.logType)
+      }
     }
 
     if (currentRoomId.value !== roomId) {
@@ -337,42 +338,6 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
-    // Room-based choices (trigger once after room is cleared)
-    if (roomId === 'goblin-tunnels' && clearedRooms.value.has(roomId) && !choicesMade.value['wounded-goblin']) {
-      const choice = allChoices['wounded-goblin']
-      if (choice) {
-        const result = presentChoice(choice)
-        pushLogs(result.logs)
-        activeChoice.value = result.activeChoice
-      }
-    }
-    if (roomId === 'mining-shaft' && revealedExits.value.has('mining-shaft-west') && !choicesMade.value['sealed-vault']) {
-      const choice = allChoices['sealed-vault']
-      if (choice) {
-        const result = presentChoice(choice)
-        pushLogs(result.logs)
-        activeChoice.value = result.activeChoice
-      }
-    }
-
-    // Lothlórien room-based choices
-    if (roomId === 'mirror-room' && !choicesMade.value['mirror-choice']) {
-      const choice = allChoices['mirror-choice']
-      if (choice) {
-        const result = presentChoice(choice)
-        pushLogs(result.logs)
-        activeChoice.value = result.activeChoice
-      }
-    }
-    if (roomId === 'orc-ambush-site' && clearedRooms.value.has(roomId) && !choicesMade.value['orc-prisoner']) {
-      const choice = allChoices['orc-prisoner']
-      if (choice) {
-        const result = presentChoice(choice)
-        pushLogs(result.logs)
-        activeChoice.value = result.activeChoice
-      }
-    }
-
     // Trap (pure handler)
     if (room.trap && !disarmedTraps.value.has(roomId)) {
       const playerStore = usePlayerStore()
@@ -423,36 +388,57 @@ export const useGameStore = defineStore('game', () => {
     // Mid-run achievements
     useStatsStore().checkMidRunAchievements()
 
-    // Hidden Shrine grants Durin's Blessing
-    if (roomId === 'hidden-shrine') {
-      const playerStore = usePlayerStore()
-      if (playerStore.player) {
-        const blessed = applyStatusEffect(playerStore.player.statusEffects, 'blessed')
-        playerStore.player.statusEffects = blessed.effects
-        log('The statue of Durin glows warmly. You feel a surge of ancient strength flow through you.', 'narrative')
-        pushLogs(blessed.logs)
+    // Declarative room events (choices, blessings, narration, victory)
+    runRoomEvents(room)
+  }
+
+  // ── Room events ────────────────────────────────────────────
+  function runRoomEvents(room: Room) {
+    const events = eligibleRoomEvents(room, {
+      roomCleared: clearedRooms.value.has(room.id),
+      revealedExits: revealedExits.value,
+      choicesMade: choicesMade.value,
+      firedRoomEvents: firedRoomEvents.value,
+    })
+    for (const event of events) {
+      if (event.once && event.id) firedRoomEvents.value.add(event.id)
+      const effect = event.effect
+      switch (effect.type) {
+        case 'choice': {
+          const choice = allChoices[effect.choiceId]
+          if (choice) {
+            const result = presentChoice(choice)
+            pushLogs(result.logs)
+            activeChoice.value = result.activeChoice
+          }
+          break
+        }
+        case 'status-effect': {
+          const playerStore = usePlayerStore()
+          if (playerStore.player) {
+            const applied = applyStatusEffect(playerStore.player.statusEffects, effect.effectId)
+            playerStore.player.statusEffects = applied.effects
+            if (effect.message) log(effect.message, 'narrative')
+            pushLogs(applied.logs)
+          }
+          break
+        }
+        case 'narration': {
+          for (const line of effect.lines) log(line.text, line.logType ?? 'narrative')
+          break
+        }
+        case 'victory': {
+          triggerVictory(effect.message)
+          break
+        }
       }
     }
+  }
 
-    // Act transition: east-gate leads into Lothlórien
-    if (roomId === 'east-gate' && currentAct.value === 'moria') {
-      log('You emerge from the darkness into blinding sunlight. The Mines of Moria lie behind you.', 'narrative')
-      log('You have survived the crossing of Moria! But your journey is not over...', 'system')
-      log('The road south leads toward the Golden Wood.', 'narrative')
-      // Add exit to dimrill-dale
-      const eastGateRoom = lookupRoom('east-gate')
-      if (eastGateRoom && !eastGateRoom.exits.some(e => e.targetRoomId === 'dimrill-dale')) {
-        eastGateRoom.exits.push({ direction: 'south', targetRoomId: 'dimrill-dale' })
-      }
-    }
-
-    // Victory (Act 2 farewell-lawn with farewell-path choice made)
-    if (roomId === 'farewell-lawn' && choicesMade.value['farewell-path']) {
-      log('Your time in Lothlórien draws to a close. The road ahead awaits.', 'narrative')
-      useStatsStore().checkEndOfRun()
-      localStorage.removeItem(SAVE_KEY)
-      phase.value = 'victory'
-    }
+  function triggerVictory(message?: string) {
+    if (message) log(message, 'narrative')
+    useStatsStore().checkEndOfRun()
+    phase.value = 'victory'
   }
 
   // ── Command routing ────────────────────────────────────────
@@ -1114,6 +1100,9 @@ export const useGameStore = defineStore('game', () => {
         activeChoice.value = choiceResult.activeChoice
       }
     }
+    if (result.triggerVictory) {
+      triggerVictory()
+    }
   }
 
   // ── NPC Talk/Trade ──────────────────────────────────────────
@@ -1419,8 +1408,8 @@ export const useGameStore = defineStore('game', () => {
     const combatStore = useCombatStore()
     if (combatStore.inCombat) { log('You can\'t craft while in combat!', 'error'); return }
 
-    if (currentRoomId.value !== 'abandoned-forge') {
-      log('You need to be at the Abandoned Forge to craft items. The ancient anvils and hearths are there.', 'error')
+    if (!currentRoom.value?.craftingStation) {
+      log('There is no forge here. You need to find a crafting station to forge items.', 'error')
       return
     }
 
@@ -1734,7 +1723,9 @@ export const useGameStore = defineStore('game', () => {
     choiceConsequences,
     removedEnemies,
     addedEnemies,
-    currentAct,
+    currentRegionId,
+    currentRegion,
+    firedRoomEvents,
     activeDialogue,
     nimrodelFragments,
     getDifficultyMultipliers,

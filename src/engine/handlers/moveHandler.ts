@@ -33,13 +33,13 @@ export function validateMove(
     return { allowed: false, logs: [entry(`There is no passage to the ${direction}.`, 'error')] }
   }
 
-  // Bridge gate: Balrog must be dead
-  if (room.id === 'bridge-of-khazad-dum' && exit.direction === 'east' && !clearedRooms.has('bridge-of-khazad-dum')) {
-    return { allowed: false, exit, logs: [entry('The Balrog blocks the way! You must defeat it first.', 'error')] }
+  // Exits gated on clearing the room's enemies (e.g. a boss guarding the way)
+  if (exit.blockedUntilCleared && !clearedRooms.has(room.id)) {
+    return { allowed: false, exit, logs: [entry(exit.lockMessage || 'The way is blocked.', 'error')] }
   }
 
-  // Key-locked exits (skip bridge east — already handled above)
-  if (exit.locked && !(room.id === 'bridge-of-khazad-dum' && exit.direction === 'east')) {
+  // Key-locked exits
+  if (exit.locked) {
     if (exit.requiredItemId) {
       const key = inventory.find(i => i.id === exit.requiredItemId)
       if (!key) {

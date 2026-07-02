@@ -1,16 +1,24 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
 import { useGameStore } from '../stores/gameStore'
-import { rooms } from '../data/rooms'
+import { world } from '../data/world'
 
 const gameStore = useGameStore()
 
-// Compute grid bounds
-const allRooms = Object.values(rooms)
-const minX = Math.min(...allRooms.map(r => r.gridX))
-const maxX = Math.max(...allRooms.map(r => r.gridX))
-const minY = Math.min(...allRooms.map(r => r.gridY))
-const maxY = Math.max(...allRooms.map(r => r.gridY))
+// Rooms of the current region only — each region has its own grid coordinate space
+const regionRooms = computed(() => Object.values(world[gameStore.currentRegionId]?.rooms ?? {}))
+const regionName = computed(() => world[gameStore.currentRegionId]?.name ?? 'MAP')
+
+// Compute grid bounds for the current region
+const bounds = computed(() => {
+  const rooms = regionRooms.value
+  return {
+    minX: Math.min(...rooms.map(r => r.gridX)),
+    maxX: Math.max(...rooms.map(r => r.gridX)),
+    minY: Math.min(...rooms.map(r => r.gridY)),
+    maxY: Math.max(...rooms.map(r => r.gridY)),
+  }
+})
 
 // Track newly-discovered rooms for one-shot flash animation
 const discoveredFlash = reactive<Set<string>>(new Set())
@@ -56,10 +64,11 @@ const grid = computed(() => {
     trailOpacity: number | null
   }[][] = []
 
+  const { minX, maxX, minY, maxY } = bounds.value
   for (let y = minY; y <= maxY; y++) {
     const row: typeof rows[0] = []
     for (let x = minX; x <= maxX; x++) {
-      const room = allRooms.find(r => r.gridX === x && r.gridY === y)
+      const room = regionRooms.value.find(r => r.gridX === x && r.gridY === y)
       const id = room?.id ?? null
       const trail = id != null ? trailOpacity.value[id] : undefined
       row.push({
@@ -81,7 +90,7 @@ const grid = computed(() => {
 
 <template>
   <div class="p-3 border border-moria-border rounded bg-moria-panel/50">
-    <div class="text-moria-info text-xs font-bold mb-2">MAP</div>
+    <div class="text-moria-info text-xs font-bold mb-2 uppercase">{{ regionName }}</div>
     <div class="flex flex-col gap-0.5">
       <div v-for="(row, ri) in grid" :key="ri" class="flex gap-0.5">
         <div

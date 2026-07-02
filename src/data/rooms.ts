@@ -122,6 +122,7 @@ export const rooms: Record<string, Room> = {
       { direction: 'south', targetRoomId: 'first-hall' },
     ],
     items: ['orcish-blade'],
+    craftingStation: true,
     gridX: 2,
     gridY: 3,
   },
@@ -149,6 +150,9 @@ export const rooms: Record<string, Room> = {
       disarmDC: 12,
       damage: '1d6',
     },
+    events: [
+      { when: { roomCleared: true }, effect: { type: 'choice', choiceId: 'wounded-goblin' } },
+    ],
     dark: true,
     gridX: 3,
     gridY: 4,
@@ -208,6 +212,9 @@ export const rooms: Record<string, Room> = {
       { direction: 'west', targetRoomId: 'secret-armory', hidden: true, revealMethod: 'examine' },
     ],
     items: ['gold-coins'],
+    events: [
+      { when: { exitRevealed: 'west' }, effect: { type: 'choice', choiceId: 'sealed-vault' } },
+    ],
     dark: true,
     gridX: 1,
     gridY: 2,
@@ -342,7 +349,7 @@ export const rooms: Record<string, Room> = {
     ],
     exits: [
       { direction: 'west', targetRoomId: 'endless-stair-base' },
-      { direction: 'east', targetRoomId: 'east-gate', locked: true, lockMessage: 'The Balrog blocks the way! You must defeat it first.' },
+      { direction: 'east', targetRoomId: 'east-gate', blockedUntilCleared: true, lockMessage: 'The Balrog blocks the way! You must defeat it first.' },
     ],
     enemies: [
       { enemyId: 'balrog', count: 1 },
@@ -379,6 +386,15 @@ export const rooms: Record<string, Room> = {
       { direction: 'east', targetRoomId: 'gates-of-moria' },
     ],
     items: ['greater-healing-potion'],
+    events: [
+      {
+        effect: {
+          type: 'status-effect',
+          effectId: 'blessed',
+          message: 'The statue of Durin glows warmly. You feel a surge of ancient strength flow through you.',
+        },
+      },
+    ],
     gridX: -1,
     gridY: 4,
   },
@@ -391,7 +407,23 @@ export const rooms: Record<string, Room> = {
       'In the Mirrormere below, you catch a reflection that is not your own — the Crown of Durin, seven stars arranged in a ring, shimmering in the still water just as Durin himself saw it at the beginning of days.',
       'Carved into the gate\'s outer frame, facing the sunlight, are words in both Khuzdul and Sindarin: "Here ends the Long Dark. Step into the light and remember those who delved in joy." Your eyes sting, and not from the brightness.',
     ],
-    exits: [],
+    exits: [
+      { direction: 'south', targetRoomId: 'dimrill-dale' },
+    ],
+    events: [
+      {
+        id: 'moria-crossed',
+        once: true,
+        effect: {
+          type: 'narration',
+          lines: [
+            { text: 'You emerge from the darkness into blinding sunlight. The Mines of Moria lie behind you.' },
+            { text: 'You have survived the crossing of Moria! But your journey is not over...', logType: 'system' },
+            { text: 'The road south leads toward the Golden Wood.' },
+          ],
+        },
+      },
+    ],
     gridX: 4,
     gridY: 0,
   },

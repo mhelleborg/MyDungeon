@@ -1,6 +1,6 @@
 import type { Item } from '../types/item'
 import type { GameLogEntry } from '../types/command'
-import { items as itemDb } from '../data/items'
+import { itemDb } from '../data/world'
 
 function log(text: string, type: GameLogEntry['type'] = 'info'): GameLogEntry {
   return { text, type, timestamp: Date.now() }

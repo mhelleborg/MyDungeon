@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import { usePlayerStore } from '../stores/playerStore'
 import { useCombatStore } from '../stores/combatStore'
-import { items as itemDb } from '../data/items'
+import { itemDb } from '../data/world'
 
 const gameStore = useGameStore()
 const playerStore = usePlayerStore()
@@ -11,7 +11,7 @@ const combatStore = useCombatStore()
 
 const player = computed(() => playerStore.player)
 const inCombat = computed(() => combatStore.inCombat)
-const atForge = computed(() => gameStore.currentRoomId === 'abandoned-forge' && !inCombat.value)
+const atForge = computed(() => !!gameStore.currentRoom?.craftingStation && !inCombat.value)
 const activeChoice = computed(() => gameStore.activeChoice)
 
 interface ActionItem {

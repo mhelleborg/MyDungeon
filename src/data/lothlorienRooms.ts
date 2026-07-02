@@ -12,6 +12,7 @@ export const lothlorienRooms: Record<string, Room> = {
       'Carved into the gate\'s outer frame: "Here ends the Long Dark. Step into the light and remember those who delved in joy."',
     ],
     exits: [
+      { direction: 'north', targetRoomId: 'east-gate' },
       { direction: 'south', targetRoomId: 'silver-river-ford' },
     ],
     items: ['moria-chronicle'],
@@ -89,6 +90,9 @@ export const lothlorienRooms: Record<string, Room> = {
     ],
     enemies: [
       { enemyId: 'orc-scout', count: 2 },
+    ],
+    events: [
+      { when: { roomCleared: true }, effect: { type: 'choice', choiceId: 'orc-prisoner' } },
     ],
     gridX: 3,
     gridY: 3,
@@ -304,6 +308,9 @@ export const lothlorienRooms: Record<string, Room> = {
     exits: [
       { direction: 'east', targetRoomId: 'celeborn-hall' },
     ],
+    events: [
+      { effect: { type: 'choice', choiceId: 'mirror-choice' } },
+    ],
     gridX: 0,
     gridY: 5,
   },
@@ -319,6 +326,17 @@ export const lothlorienRooms: Record<string, Room> = {
     ],
     exits: [
       { direction: 'north', targetRoomId: 'celeborn-hall' },
+    ],
+    events: [
+      {
+        id: 'lothlorien-farewell',
+        once: true,
+        when: { choiceMade: 'farewell-path' },
+        effect: {
+          type: 'victory',
+          message: 'Your time in Lothlórien draws to a close. The road ahead awaits.',
+        },
+      },
     ],
     gridX: 1,
     gridY: 6,

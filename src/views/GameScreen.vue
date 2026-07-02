@@ -301,10 +301,16 @@ watch(
           </div>
         </div>
 
-        <button
-          @click="gameStore.phase = 'title'"
-          class="w-full sm:w-auto px-6 py-2.5 bg-moria-border text-moria-highlight rounded hover:bg-moria-highlight hover:text-moria-bg cursor-pointer min-h-[44px]"
-        >PLAY AGAIN</button>
+        <div class="flex flex-col sm:flex-row gap-2 justify-center">
+          <button
+            @click="gameStore.phase = 'playing'"
+            class="w-full sm:w-auto px-6 py-2.5 bg-moria-highlight text-moria-bg font-bold rounded hover:bg-moria-highlight/80 cursor-pointer min-h-[44px]"
+          >CONTINUE EXPLORING</button>
+          <button
+            @click="gameStore.phase = 'title'"
+            class="w-full sm:w-auto px-6 py-2.5 bg-moria-border text-moria-highlight rounded hover:bg-moria-highlight hover:text-moria-bg cursor-pointer min-h-[44px]"
+          >PLAY AGAIN</button>
+        </div>
       </div>
     </div>
   </div>
