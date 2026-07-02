@@ -280,6 +280,87 @@ describe('open-world smoke test', () => {
     })
   })
 
+  describe('Rivendell region', () => {
+    it('starts a fresh journey in the courtyard with the main quest', async () => {
+      const { useQuestStore } = await import('../stores/questStore')
+      const gameStore = startGame('rivendell')
+      expect(gameStore.currentRoomId).toBe('rivendell-courtyard')
+      expect(gameStore.currentRegionId).toBe('rivendell')
+      expect(useQuestStore().questProgress['road-to-moria']).toBeDefined()
+      expect(gameStore.gameLog.map(l => l.text).join('\n')).toContain('Rivendell is now a waypoint')
+    })
+
+    it('Elrond gives counsel, a reward, and advances the main quest', async () => {
+      const { useQuestStore } = await import('../stores/questStore')
+      const gameStore = startGame('rivendell')
+      const playerStore = usePlayerStore()
+
+      gameStore.enterRoom('last-homely-house')
+      gameStore.handleCommand('talk elrond')
+
+      expect(useQuestStore().questProgress['road-to-moria']!.stageIndex).toBe(1)
+      expect(playerStore.inventory.some(i => i.id === 'miruvor')).toBe(true)
+    })
+
+    it('walking the road into Moria completes the prologue and starts the crossing', async () => {
+      const { useQuestStore } = await import('../stores/questStore')
+      const gameStore = startGame('rivendell')
+      const questStore = useQuestStore()
+
+      gameStore.enterRoom('last-homely-house')
+      gameStore.handleCommand('talk elrond')
+      gameStore.enterRoom('moria-west-approach')
+      expect(questStore.questProgress['road-to-moria']!.stageIndex).toBe(2)
+      expect(gameStore.gameLog.map(l => l.text).join('\n')).toContain('You have reached the Walls of Moria')
+
+      const logCount = gameStore.gameLog.length
+      gameStore.handleCommand('east')
+      expect(gameStore.currentRoomId).toBe('gates-of-moria')
+      expect(gameStore.currentRegionId).toBe('moria')
+      const newLogs = gameStore.gameLog.slice(logCount).map(l => l.text).join('\n')
+      expect(newLogs).toContain('— The Mines of Moria —')
+      expect(questStore.questProgress['road-to-moria']!.completed).toBe(true)
+      expect(questStore.questProgress['crossing-of-moria']).toBeDefined()
+    })
+
+    it('Erestor\'s fetch quest completes on returning the records', async () => {
+      const { useQuestStore } = await import('../stores/questStore')
+      const gameStore = startGame('rivendell')
+      const questStore = useQuestStore()
+      const playerStore = usePlayerStore()
+
+      gameStore.enterRoom('elrond-library')
+      gameStore.handleCommand('talk erestor')
+      expect(questStore.questProgress['records-of-eregion']).toBeDefined()
+
+      gameStore.enterRoom('eregion-ruins') // goblin raiders attack
+      useCombatStore().combatEnemies.forEach(e => { e.hp = 0 })
+      useCombatStore().inCombat = false
+      gameStore.handleCommand('take records')
+      expect(questStore.questProgress['records-of-eregion']!.stageIndex).toBe(1)
+
+      const goldBefore = playerStore.player!.gold
+      gameStore.enterRoom('elrond-library')
+      gameStore.handleCommand('talk erestor')
+      expect(questStore.questProgress['records-of-eregion']!.completed).toBe(true)
+      expect(playerStore.player!.gold).toBe(goldBefore + 40)
+    })
+
+    it('the smith buys and sells in the forge', () => {
+      const gameStore = startGame('rivendell')
+      const playerStore = usePlayerStore()
+      gameStore.enterRoom('rivendell-forge')
+
+      gameStore.handleCommand('buy torch')
+      expect(playerStore.inventory.some(i => i.id === 'torch')).toBe(true)
+
+      playerStore.addItem({ id: 'wolf-pelt', name: 'Wolf Pelt', description: '', type: 'misc', value: 12 })
+      const goldBefore = playerStore.player!.gold
+      gameStore.handleCommand('sell wolf pelt')
+      expect(playerStore.player!.gold).toBe(goldBefore + 6)
+    })
+  })
+
   describe('leveling perks', () => {
     it('unlocks the level 3 class perk from quest XP', () => {
       const gameStore = startGame()

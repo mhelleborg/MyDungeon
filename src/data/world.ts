@@ -16,14 +16,50 @@ import { lothlorienChoices } from './lothlorienChoices'
 import { lothlorienPuzzles, lothlorienRoomPuzzles } from './lothlorienPuzzles'
 import { lothlorienEncounters } from './lothlorienEncounters'
 import { moriaQuests, lothlorienQuests } from './quests'
+import {
+  rivendellRooms,
+  rivendellEnemies,
+  rivendellItems,
+  rivendellNPCs,
+  rivendellRoomNPCs,
+  rivendellQuests,
+} from './rivendell'
 
 export const DEFAULT_REGION: RegionId = 'moria'
 
 export const world: Record<RegionId, Region> = {
+  rivendell: {
+    id: 'rivendell',
+    name: 'Rivendell & Eriador',
+    entryRoomId: 'rivendell-courtyard',
+    arrivalLogs: [
+      { text: '— Rivendell —', logType: 'system' },
+      { text: 'The hidden valley opens below you, loud with waterfalls and quiet with peace. You have reached Imladris, the Last Homely House east of the Sea.', logType: 'narrative' },
+    ],
+    startOption: { label: 'Rivendell (Prologue)', desc: 'Begin in the Last Homely House. Gear up, take counsel, and walk the wild road to Moria\'s West-gate.' },
+    mapPosition: { x: 300, y: 120 },
+    travelFlavor: [
+      'You take the old road through the Trollshaws, keeping to the daylight and the high ground.',
+      'The known paths of Eriador carry you swiftly, the Misty Mountains standing sentinel at your shoulder.',
+    ],
+    roadAmbush: [
+      { enemyId: 'wild-wolf', count: 2 },
+    ],
+    rooms: rivendellRooms,
+    enemies: rivendellEnemies,
+    items: rivendellItems,
+    npcs: rivendellNPCs,
+    roomNPCs: rivendellRoomNPCs,
+    quests: rivendellQuests,
+  },
   moria: {
     id: 'moria',
     name: 'The Mines of Moria',
     entryRoomId: STARTING_ROOM,
+    arrivalLogs: [
+      { text: '— The Mines of Moria —', logType: 'system' },
+      { text: 'The long dark of Khazad-dûm swallows the daylight behind you. Somewhere far below, something is aware that the doors have opened.', logType: 'narrative' },
+    ],
     startOption: { label: 'Mines of Moria (Act I)', desc: 'Begin at the West-gate. The full journey through the dark.' },
     mapPosition: { x: 390, y: 300 },
     travelFlavor: [

@@ -69,6 +69,13 @@ const visibleRegionNodes = computed(() =>
     })),
 )
 
+// Real regions the player has not yet set foot in — shown as mysteries
+const undiscoveredRegionNodes = computed(() =>
+  Object.values(world)
+    .filter(r => r.mapPosition && !discoveredRegions.value.some(d => d.id === r.id))
+    .map(r => ({ id: r.id, x: r.mapPosition!.x, y: r.mapPosition!.y })),
+)
+
 function selectRegion(id: RegionId) {
   selectedRegionId.value = id
 }
@@ -141,6 +148,13 @@ function close() {
           <circle :cx="f.mapPosition.x" :cy="f.mapPosition.y" r="9" fill="#141210" stroke="#3d3528" stroke-width="2" />
           <text :x="f.mapPosition.x" :y="f.mapPosition.y - 18" text-anchor="middle" fill="#7f8c8d" font-size="17" class="wm-name">{{ f.name }}</text>
           <text :x="f.mapPosition.x" :y="f.mapPosition.y + 28" text-anchor="middle" fill="#5a5347" font-size="12" font-style="italic">the road is not yet open</text>
+        </g>
+
+        <!-- Real but undiscovered regions: the road leads somewhere... -->
+        <g v-for="u in undiscoveredRegionNodes" :key="u.id" opacity="0.7">
+          <circle :cx="u.x" :cy="u.y" r="12" fill="#141210" stroke="#d4a843" stroke-width="1.5" stroke-dasharray="3 3" />
+          <text :x="u.x" :y="u.y + 6" text-anchor="middle" fill="#d4a843" font-size="16" font-weight="bold">?</text>
+          <text :x="u.x" :y="u.y + 32" text-anchor="middle" fill="#7f8c8d" font-size="12" font-style="italic">the road leads on</text>
         </g>
 
         <!-- Discovered regions -->

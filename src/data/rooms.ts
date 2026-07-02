@@ -15,6 +15,7 @@ export const rooms: Record<string, Room> = {
     exits: [
       { direction: 'east', targetRoomId: 'entrance-hall' },
       { direction: 'west', targetRoomId: 'hidden-shrine', hidden: true, revealMethod: 'puzzle' },
+      { direction: 'south', targetRoomId: 'moria-west-approach' },
     ],
     items: ['torch'],
     waypoint: true,
