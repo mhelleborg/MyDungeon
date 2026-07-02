@@ -8,6 +8,7 @@ import { createPlayer } from '../data/player-classes'
 import { rollDice } from '../engine/dice'
 import type { GameLogEntry } from '../types/command'
 import { playSound } from '../engine/audio'
+import { unlockPerksAtLevel, getPerkAcBonus } from '../engine/perks'
 import type { RegionId } from '../types/region'
 import { useCombatStore } from './combatStore'
 
@@ -65,6 +66,7 @@ export const usePlayerStore = defineStore('player', () => {
       player.value.xpToNext = Math.floor(player.value.xpToNext * 1.5)
       const hpGain = Math.max(1, rollDice('1d8+0').total + getModifier(player.value.abilities.con))
       player.value.maxHp += hpGain
+      unlockPerksAtLevel(player.value, player.value.level)
     }
     player.value.hp = player.value.maxHp
 
@@ -127,7 +129,7 @@ export const usePlayerStore = defineStore('player', () => {
       logs.push({ text: `You wield the ${item.name}.`, type: 'info', timestamp: Date.now() })
     } else if (item.type === 'armor') {
       player.value.equippedArmor = itemId
-      player.value.ac = 10 + getModifier(player.value.abilities.dex) + (item.armorBonus || 0)
+      player.value.ac = 10 + getModifier(player.value.abilities.dex) + (item.armorBonus || 0) + getPerkAcBonus(player.value)
       logs.push({ text: `You don the ${item.name}. (AC: ${player.value.ac})`, type: 'info', timestamp: Date.now() })
     } else {
       logs.push({ text: 'You can\'t equip that.', type: 'error', timestamp: Date.now() })
@@ -165,7 +167,7 @@ export const usePlayerStore = defineStore('player', () => {
     if (!player.value) return []
     const logs: GameLogEntry[] = []
     player.value.xp += amount
-    if (player.value.xp >= player.value.xpToNext) {
+    while (player.value.xp >= player.value.xpToNext) {
       player.value.level++
       playSound('levelup')
       player.value.xp -= player.value.xpToNext
@@ -174,6 +176,7 @@ export const usePlayerStore = defineStore('player', () => {
       player.value.maxHp += hpGain
       player.value.hp = player.value.maxHp
       logs.push({ text: `LEVEL UP! You are now level ${player.value.level}! (+${hpGain} HP)`, type: 'system', timestamp: Date.now() })
+      logs.push(...unlockPerksAtLevel(player.value, player.value.level))
     }
     return logs
   }

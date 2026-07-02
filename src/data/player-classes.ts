@@ -128,5 +128,6 @@ export function createPlayer(name: string, playerClass: PlayerClass): Player {
     gold: 10,
     statusEffects: [],
     fumblePenalty: false,
+    perks: [],
   }
 }

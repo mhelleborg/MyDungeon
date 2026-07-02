@@ -27,16 +27,16 @@ import { triggerTrap, attemptDisarm } from '../engine/handlers/trapHandler'
 import { tickLight as tickLightPure, lightTorch, castLightSpell, type LightState } from '../engine/handlers/lightHandler'
 import { attemptFlee, attemptStealth } from '../engine/handlers/fleeHandler'
 import { canRest, resolveRest } from '../engine/handlers/restHandler'
-import { talkToNPC, listTradeOffers, buyFromNPC } from '../engine/handlers/npcHandler'
+import { talkToNPC, listTradeOffers, buyFromNPC, sellToTrader } from '../engine/handlers/npcHandler'
 import { attemptPuzzle, getPuzzleHint } from '../engine/handlers/puzzleHandler'
 import { trapDestroyText } from '../data/roomInteractions'
 import { examineInteraction, resolveSearch } from '../engine/handlers/interactHandler'
 import { eligibleRoomEvents } from '../engine/handlers/roomEventHandler'
 import { listDiscoveredWaypoints, validateTravel, rollRoadEvent, describeJourney } from '../engine/handlers/travelHandler'
+import { listPerkNames } from '../engine/perks'
 import { playSound } from '../engine/audio'
 import { checkRecruitment, rollCompanionComment } from '../engine/handlers/companionHandler'
 import { difficulty, currentRoomId, roomItems, companions, getDifficultyMultipliers, dropItemToGround } from './gameContext'
-import { SAVE_KEY } from '../types/save'
 import { saveGame } from '../engine/saveLoad'
 import {
   shouldTriggerEncounter,
@@ -51,6 +51,8 @@ import type { RiddleEncounter } from '../types/encounter'
 import { usePlayerStore } from './playerStore'
 import { useCombatStore } from './combatStore'
 import { useStatsStore } from './statsStore'
+import { useQuestStore } from './questStore'
+import type { QuestTriggerType } from '../types/quest'
 import { listRecipes, tryCraft, craftedItems } from '../engine/crafting'
 import { applyStatusEffect } from '../engine/statusEffects'
 import type { ActiveChoice } from '../types/choice'
@@ -96,6 +98,8 @@ export const useGameStore = defineStore('game', () => {
   const currentRegionId = ref<RegionId>(DEFAULT_REGION)
   /** World map overlay visibility (transient UI state, not saved) */
   const worldMapOpen = ref(false)
+  /** Most recently visited waypoint — where the player rises after defeat */
+  const lastWaypointId = ref<string>('')
   /** Ids of once-only room events that have already fired */
   const firedRoomEvents = ref<Set<string>>(new Set())
   /** Active branching dialogue */
@@ -136,17 +140,36 @@ export const useGameStore = defineStore('game', () => {
     permanentLight.value = state.permanent
   }
 
+  /**
+   * When the player falls, they do not die — they rise again at the last
+   * waypoint they visited, weakened and lighter of purse.
+   */
   function checkDeath(): boolean {
     const playerStore = usePlayerStore()
-    if (!playerStore.isAlive) {
-      const combatStore = useCombatStore()
-      if (combatStore.inCombat) combatStore.endCombat()
-      playSound('death')
-      localStorage.removeItem(SAVE_KEY)
-      phase.value = 'game-over'
-      return true
+    if (playerStore.isAlive) return false
+
+    const combatStore = useCombatStore()
+    if (combatStore.inCombat) combatStore.endCombat()
+    playSound('death')
+
+    const player = playerStore.player
+    const refugeId = (lastWaypointId.value && lookupRoom(lastWaypointId.value))
+      ? lastWaypointId.value
+      : (currentRegion.value ?? getRegion(DEFAULT_REGION)!).entryRoomId
+    const refuge = lookupRoom(refugeId)
+
+    log('Darkness takes you...', 'combat')
+    if (player) {
+      const goldLost = Math.floor(player.gold * 0.2)
+      player.gold -= goldLost
+      player.hp = Math.max(1, Math.ceil(player.maxHp / 2))
+      player.statusEffects = player.statusEffects.filter(e => e.duration >= 9999)
+      player.fumblePenalty = false
+      log(`...but this is not the end of your road. You awaken at ${refuge?.waypointLabel ?? refuge?.name ?? 'a place of refuge'}, weakened but alive.`, 'system')
+      if (goldLost > 0) log(`You lost ${goldLost} gold in the darkness.`, 'error')
     }
-    return false
+    enterRoom(refugeId)
+    return true
   }
 
   function applyEncounterRewards(result: { gold?: number; healHp?: number; xp?: number; itemIds?: string[]; damage?: number }) {
@@ -178,9 +201,16 @@ export const useGameStore = defineStore('game', () => {
   function markRoomCleared() {
     const combatStore = useCombatStore()
     if (!combatStore.inCombat) {
+      const wasCleared = clearedRooms.value.has(currentRoomId.value)
       clearedRooms.value.add(currentRoomId.value)
       useStatsStore().checkMidRunAchievements()
+      if (!wasCleared) questEvent('clear-room', currentRoomId.value)
     }
+  }
+
+  /** Feed an event to the quest engine and surface any quest updates. */
+  function questEvent(type: QuestTriggerType, target: string) {
+    pushLogs(useQuestStore().questEvent(type, target))
   }
 
   // ── Init ───────────────────────────────────────────────────
@@ -216,6 +246,7 @@ export const useGameStore = defineStore('game', () => {
     addedEnemies.value = {}
     currentRegionId.value = region.id
     firedRoomEvents.value = new Set()
+    lastWaypointId.value = ''
     activeDialogue.value = null
     nimrodelFragments.value = new Set()
     applyLightState({ hasLight: false, turnsRemaining: 0, permanent: false })
@@ -228,6 +259,8 @@ export const useGameStore = defineStore('game', () => {
         }
       }
     }
+
+    useQuestStore().reset()
 
     // Init stats for this run
     const playerStore = usePlayerStore()
@@ -272,6 +305,7 @@ export const useGameStore = defineStore('game', () => {
     if (wasNew) {
       useStatsStore().recordRoomExplored()
     }
+    if (room.waypoint) lastWaypointId.value = roomId
 
     // Describe room (pure handler)
     const dark = isDark(roomId)
@@ -398,6 +432,9 @@ export const useGameStore = defineStore('game', () => {
 
     // Declarative room events (choices, blessings, narration, victory)
     runRoomEvents(room)
+
+    // Quest progress
+    questEvent('enter-room', roomId)
   }
 
   // ── Room events ────────────────────────────────────────────
@@ -480,6 +517,8 @@ export const useGameStore = defineStore('game', () => {
       case 'travel':  handleTravel(cmd); break
       case 'talk':    handleTalk(cmd); break
       case 'trade':   handleTrade(cmd); break
+      case 'sell':    handleSell(cmd); break
+      case 'quests':  pushLogs(useQuestStore().journalLogs()); break
       case 'say':     handleSay(cmd); break
       case 'solve':   handleSolve(cmd); break
       case 'craft':   handleCraft(cmd); break
@@ -509,7 +548,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     // Tick light (skip info-only commands)
-    if (!['help', 'stats', 'inventory', 'map', 'save', 'load'].includes(cmd.type)) {
+    if (!['help', 'stats', 'inventory', 'map', 'quests', 'save', 'load'].includes(cmd.type)) {
       const result = tickLightPure({
         hasLight: hasLight.value,
         turnsRemaining: lightTurnsRemaining.value,
@@ -520,7 +559,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     // Auto-save after state-changing commands
-    if (!['help', 'stats', 'inventory', 'map', 'load'].includes(cmd.type)) {
+    if (!['help', 'stats', 'inventory', 'map', 'quests', 'load'].includes(cmd.type)) {
       saveGame()
     }
   }
@@ -776,6 +815,7 @@ export const useGameStore = defineStore('game', () => {
 
     pushLogs(playerStore.addItem(item))
     useStatsStore().recordItemFound(item.id)
+    questEvent('take-item', item.id)
   }
 
   // ── Drop ───────────────────────────────────────────────────
@@ -1078,7 +1118,10 @@ export const useGameStore = defineStore('game', () => {
 
     for (const itemId of result.giveItemIds) {
       const item = itemDb[itemId]
-      if (item) pushLogs(playerStore.addItem(item))
+      if (item) {
+        pushLogs(playerStore.addItem(item))
+        questEvent('take-item', item.id)
+      }
     }
     for (const itemId of result.takeItemIds) {
       playerStore.removeItem(itemId)
@@ -1088,6 +1131,7 @@ export const useGameStore = defineStore('game', () => {
     if (result.healFull) playerStore.player.hp = playerStore.player.maxHp
     for (const [key, val] of Object.entries(result.flags)) {
       choiceConsequences.value[key] = val
+      if (val) questEvent('flag-set', key)
     }
     if (result.nimrodelFragment) {
       nimrodelFragments.value.add(result.nimrodelFragment)
@@ -1098,6 +1142,7 @@ export const useGameStore = defineStore('game', () => {
         if (songItem && !playerStore.inventory.some(i => i.id === 'nimrodel-song')) {
           pushLogs(playerStore.addItem(songItem))
           log('The three fragments of the ancient lay weave together in your mind. You know the Song of Nimrodel.', 'loot')
+          questEvent('take-item', 'nimrodel-song')
         }
       }
     }
@@ -1130,6 +1175,7 @@ export const useGameStore = defineStore('game', () => {
     const npc = findNPCInRoom(cmd.target)
     if (!npc) { log('There is no one here to talk to.', 'error'); return }
 
+    questEvent('talk-npc', npc.id)
     const playerStore = usePlayerStore()
 
     // Check if this NPC has already offered to join and player is talking again to accept
@@ -1270,6 +1316,38 @@ export const useGameStore = defineStore('game', () => {
         playerStore.player.gold -= result.cost
         pushLogs(playerStore.addItem(item))
       }
+    }
+  }
+
+  function handleSell(cmd: ParsedCommand) {
+    const playerStore = usePlayerStore()
+    if (!playerStore.player) return
+
+    // Someone to sell to: a trading NPC here, or an active merchant encounter
+    const traderNPC = (allRoomNPCs[currentRoomId.value] ?? [])
+      .map(id => allNPCs[id])
+      .find(n => n && n.tradeOffers && n.tradeOffers.length > 0)
+    const merchantHere = activeEncounter.value?.type === 'merchant'
+    if (!traderNPC && !merchantHere) {
+      log('There is no one here to sell to.', 'error')
+      return
+    }
+    if (traderNPC && isDark() && traderNPC.requiresLight) {
+      log('It is too dark to trade here.', 'error')
+      return
+    }
+
+    const traderName = traderNPC?.name
+      ?? encounterPool.find(e => e.id === activeEncounter.value?.encounterId)?.name
+      ?? 'The merchant'
+    const equippedIds = [playerStore.player.equippedWeapon, playerStore.player.equippedArmor]
+      .filter((id): id is string => !!id)
+
+    const result = sellToTrader(traderName, cmd.target ?? '', playerStore.inventory, equippedIds)
+    pushLogs(result.logs)
+    if (result.success && result.itemId && result.price !== undefined) {
+      playerStore.removeItem(result.itemId)
+      playerStore.player.gold += result.price
     }
   }
 
@@ -1505,6 +1583,7 @@ export const useGameStore = defineStore('game', () => {
       useStatsStore().recordItemCrafted()
       useStatsStore().checkMidRunAchievements()
       playSound('levelup')
+      questEvent('craft-item', item.id)
     }
   }
 
@@ -1572,6 +1651,7 @@ export const useGameStore = defineStore('game', () => {
     // Record the choice
     choicesMade.value[result.choiceId] = result.optionId
     activeChoice.value = null
+    questEvent('choice-made', result.choiceId)
 
     // Track stats
     useStatsStore().recordChoiceMade(result.choiceId, result.optionId)
@@ -1714,6 +1794,10 @@ export const useGameStore = defineStore('game', () => {
       const effects = p.statusEffects.map(e => `${e.name} (${e.duration} turns)`).join(', ')
       log(`Effects: ${effects}`, 'info')
     }
+    const perkNames = listPerkNames(p)
+    if (perkNames.length > 0) {
+      log(`Perks: ${perkNames.join(', ')}`, 'info')
+    }
   }
 
   function handleHelp() {
@@ -1734,6 +1818,8 @@ export const useGameStore = defineStore('game', () => {
     log('map (or M) - Open the world map', 'info')
     log('talk [name] - Talk to an NPC', 'info')
     log('trade/buy [item] - Trade with an NPC', 'info')
+    log('sell <item> - Sell an item to a trader (half value)', 'info')
+    log('quests/journal - View your quest journal', 'info')
     log('say <word> - Speak a word aloud (for puzzles)', 'info')
     log('solve/pull <answer> - Attempt to solve a puzzle', 'info')
     log('search <target> - Search an object for loot', 'info')
@@ -1786,6 +1872,7 @@ export const useGameStore = defineStore('game', () => {
     currentRegion,
     firedRoomEvents,
     worldMapOpen,
+    lastWaypointId,
     activeDialogue,
     nimrodelFragments,
     getDifficultyMultipliers,

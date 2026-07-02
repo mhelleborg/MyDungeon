@@ -12,8 +12,10 @@ import { companionAttack, companionTakeDamage } from '../engine/handlers/compani
 import { playSound } from '../engine/audio'
 import { usePlayerStore } from './playerStore'
 import { useStatsStore } from './statsStore'
+import { useQuestStore } from './questStore'
 import { getDifficultyMultipliers, companions, dropItemToGround } from './gameContext'
 import { tickStatusEffects, cleanupExpiredEffects, getStatusAttackBonus, getStatusAcBonus, applyStatusEffect } from '../engine/statusEffects'
+import { getPerkAttackBonus } from '../engine/perks'
 import { rollPlayerCritical, rollPlayerFumble, rollEnemyCritical, rollEnemyFumble } from '../engine/criticalEffects'
 
 export type HitEventKind = 'damage-out' | 'damage-in' | 'crit' | 'miss' | 'heal' | 'magic'
@@ -227,7 +229,7 @@ export const useCombatStore = defineStore('combat', () => {
     const weapon = playerStore.getEquippedWeapon()
     const weaponDamage = weapon?.damage || '1d4+0'
     const statusBonus = getStatusAttackBonus(playerStore.player.statusEffects)
-    const attackBonus = (weapon?.attackBonus || 0) + statusBonus
+    const attackBonus = (weapon?.attackBonus || 0) + statusBonus + getPerkAttackBonus(playerStore.player)
 
     // Player attacks
     const result = playerAttack(playerStore.player, target, weaponDamage, attackBonus)
@@ -284,6 +286,7 @@ export const useCombatStore = defineStore('combat', () => {
       if (target.id === 'balrog') statsStore.recordBalrogSlain()
       const xpLogs = playerStore.addXp(target.xpReward)
       logs.push(...xpLogs)
+      logs.push(...useQuestStore().questEvent('kill-enemy', target.id))
 
       // Loot drops to the ground
       if (target.lootTable) {
@@ -359,6 +362,7 @@ export const useCombatStore = defineStore('combat', () => {
       if (target.id === 'balrog') statsStore.recordBalrogSlain()
       const xpLogs = playerStore.addXp(target.xpReward)
       logs.push(...xpLogs)
+      logs.push(...useQuestStore().questEvent('kill-enemy', target.id))
     }
 
     if (livingEnemies.value.length === 0) {
@@ -404,6 +408,7 @@ export const useCombatStore = defineStore('combat', () => {
         if (target.id === 'balrog') statsStore.recordBalrogSlain()
         const xpLogs = playerStore.addXp(target.xpReward)
         logs.push(...xpLogs)
+        logs.push(...useQuestStore().questEvent('kill-enemy', target.id))
 
         if (target.lootTable) {
           const loot = rollLoot(target.lootTable)
@@ -589,6 +594,7 @@ export const useCombatStore = defineStore('combat', () => {
         bStats.recordBalrogSlain()
         const xpLogs = playerStore.addXp(balrog.xpReward)
         logs.push(...xpLogs)
+        logs.push(...useQuestStore().questEvent('kill-enemy', balrog.id))
 
         const loot = rollLoot(balrog.lootTable || [])
         for (const item of loot) {

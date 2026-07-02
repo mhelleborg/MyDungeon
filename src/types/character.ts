@@ -36,6 +36,8 @@ export interface Player {
   gold: number
   statusEffects: import('../types/statusEffect').StatusEffect[]
   fumblePenalty: boolean     // true if player fumbled and loses next action
+  /** Ids of class perks unlocked by leveling (see engine/perks.ts) */
+  perks: string[]
 }
 
 export interface Enemy {

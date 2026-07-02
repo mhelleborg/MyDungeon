@@ -96,6 +96,14 @@ export function parseCommand(input: string): ParsedCommand {
   if (verb === 'trade' || verb === 'buy' || verb === 'shop') {
     return { type: 'trade', target: rest || undefined, raw }
   }
+  if (verb === 'sell') {
+    return { type: 'sell', target: rest || undefined, raw }
+  }
+
+  // Quest journal
+  if (verb === 'quests' || verb === 'quest' || verb === 'journal' || verb === 'j') {
+    return { type: 'quests', raw }
+  }
 
   // Puzzles
   if (verb === 'say' || verb === 'answer') {

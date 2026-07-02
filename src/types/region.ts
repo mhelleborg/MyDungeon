@@ -5,6 +5,7 @@ import type { NPC } from './npc'
 import type { Choice } from './choice'
 import type { Puzzle } from './puzzle'
 import type { Encounter } from './encounter'
+import type { Quest } from './quest'
 import type { RoomInteraction } from '../data/roomInteractions'
 import type { GameLogEntry } from './command'
 
@@ -40,4 +41,5 @@ export interface Region {
   roomPuzzles?: Record<string, string[]>
   encounters?: Encounter[]
   roomInteractions?: Record<string, RoomInteraction[]>
+  quests?: Record<string, Quest>
 }

@@ -121,3 +121,44 @@ export function buyFromNPC(
     logs: [entry(`You buy ${item.name} for ${offer.cost} gold.`, 'loot')],
   }
 }
+
+export interface SellResult extends HandlerResult {
+  success: boolean
+  itemId?: string
+  price?: number
+}
+
+/**
+ * Pure: attempt to sell an inventory item to a trader.
+ * Traders pay half an item's value (minimum 1 gold). Quest items and
+ * currently equipped gear cannot be sold.
+ */
+export function sellToTrader(
+  traderName: string,
+  targetName: string,
+  inventory: Item[],
+  equippedIds: string[],
+): SellResult {
+  if (!targetName) {
+    return { success: false, logs: [entry('Sell what? Usage: sell <item>', 'error')] }
+  }
+
+  const item = inventory.find(i => i.name.toLowerCase().includes(targetName.toLowerCase()))
+  if (!item) {
+    return { success: false, logs: [entry(`You don't have any "${targetName}".`, 'error')] }
+  }
+  if (item.type === 'quest') {
+    return { success: false, logs: [entry(`The ${item.name} is too important to sell.`, 'error')] }
+  }
+  if (equippedIds.includes(item.id)) {
+    return { success: false, logs: [entry(`You are wearing the ${item.name}. Unequip it first.`, 'error')] }
+  }
+
+  const price = Math.max(1, Math.floor((item.value || 0) / 2))
+  return {
+    success: true,
+    itemId: item.id,
+    price,
+    logs: [entry(`${traderName} pays you ${price} gold for the ${item.name}.`, 'loot')],
+  }
+}

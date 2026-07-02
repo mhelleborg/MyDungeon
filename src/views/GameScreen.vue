@@ -8,6 +8,7 @@ import InventoryPanel from '../components/InventoryPanel.vue'
 import CombatLog from '../components/CombatLog.vue'
 import MiniMap from '../components/MiniMap.vue'
 import WorldMap from '../components/WorldMap.vue'
+import QuestJournal from '../components/QuestJournal.vue'
 import AchievementToast from '../components/AchievementToast.vue'
 import FloaterLayer from '../components/FloaterLayer.vue'
 import { useGameStore } from '../stores/gameStore'
@@ -94,7 +95,7 @@ const hpBarColor = computed(() => {
 })
 
 // Mobile sidebar tab
-type MobileTab = 'stats' | 'inv' | 'map' | null
+type MobileTab = 'stats' | 'inv' | 'quests' | 'map' | null
 const mobileTab = ref<MobileTab>(null)
 function toggleMobileTab(tab: MobileTab) {
   mobileTab.value = mobileTab.value === tab ? null : tab
@@ -171,6 +172,7 @@ watch(
       <div class="hidden md:flex w-64 flex-col gap-3 p-3 border-l border-moria-border overflow-y-auto">
         <PlayerStats />
         <InventoryPanel />
+        <QuestJournal />
         <MiniMap />
         <button
           @click="gameStore.worldMapOpen = true"
@@ -184,18 +186,19 @@ watch(
     <div class="md:hidden border-t border-moria-border shrink-0">
       <div class="flex">
         <button
-          v-for="tab in (['stats', 'inv', 'map'] as const)"
+          v-for="tab in (['stats', 'inv', 'quests', 'map'] as const)"
           :key="tab"
           @click="toggleMobileTab(tab)"
           class="flex-1 py-2 text-[11px] font-bold text-center transition-colors cursor-pointer"
           :class="mobileTab === tab
             ? 'bg-moria-highlight/20 text-moria-highlight border-b-2 border-moria-highlight'
             : 'text-moria-info hover:text-moria-text'"
-        >{{ tab === 'stats' ? 'STATS' : tab === 'inv' ? 'INV' : 'MAP' }}</button>
+        >{{ tab === 'stats' ? 'STATS' : tab === 'inv' ? 'INV' : tab === 'quests' ? 'QUESTS' : 'MAP' }}</button>
       </div>
       <div v-if="mobileTab" class="max-h-[40vh] overflow-y-auto p-2 bg-moria-panel/80 border-t border-moria-border/50">
         <PlayerStats v-if="mobileTab === 'stats'" />
         <InventoryPanel v-if="mobileTab === 'inv'" />
+        <QuestJournal v-if="mobileTab === 'quests'" />
         <template v-if="mobileTab === 'map'">
           <MiniMap />
           <button

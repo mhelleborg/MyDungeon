@@ -197,7 +197,7 @@ describe('saveLoad', () => {
   describe('migrateSave', () => {
     it('returns current-version saves unchanged', () => {
       const data = serialize()
-      expect(migrateSave(data as unknown as Record<string, unknown>)).toBe(data)
+      expect(migrateSave(data as unknown as Record<string, unknown>)).toEqual(data)
     })
 
     it('migrates v3 saves: currentAct becomes currentRegionId', () => {
@@ -221,6 +221,22 @@ describe('saveLoad', () => {
     it('rejects unknown versions', () => {
       expect(migrateSave({ version: 1 })).toBeNull()
       expect(migrateSave({ version: 999 })).toBeNull()
+    })
+
+    it('migrates v4 saves: adds quests, perks and last waypoint', () => {
+      const playerStore = usePlayerStore()
+      playerStore.initPlayer('Gimli', 'dwarf-warrior')
+      playerStore.player!.level = 5
+      const v4 = { ...serialize(), version: 4 } as Record<string, unknown>
+      delete v4.questProgress
+      delete v4.lastWaypointId
+      ;(v4.player as { perks?: string[] }).perks = undefined
+
+      const migrated = migrateSave(v4)!
+      expect(migrated.version).toBe(SAVE_VERSION)
+      expect(migrated.questProgress).toEqual({})
+      expect(migrated.lastWaypointId).toBe('gates-of-moria')
+      expect(migrated.player!.perks).toEqual(expect.arrayContaining(['stone-skin', 'battle-fury']))
     })
 
     it('loadGame accepts a v3 save via migration', () => {

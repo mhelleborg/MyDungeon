@@ -195,4 +195,104 @@ describe('open-world smoke test', () => {
       expect(gameStore.worldMapOpen).toBe(true)
     })
   })
+
+  describe('quests', () => {
+    it('the main quest starts at the gates and advances through Moria', async () => {
+      const { useQuestStore } = await import('../stores/questStore')
+      const gameStore = startGame()
+      const questStore = useQuestStore()
+
+      expect(questStore.questProgress['crossing-of-moria']).toBeDefined()
+      expect(gameStore.gameLog.map(l => l.text).join('\n')).toContain('New quest: The Crossing of Moria')
+
+      gameStore.enterRoom('bridge-of-khazad-dum') // starts balrog combat
+      expect(questStore.questProgress['crossing-of-moria']!.stageIndex).toBe(1)
+
+      // Simulate clearing the bridge
+      const combatStore = useCombatStore()
+      combatStore.combatEnemies.forEach(e => { e.hp = 0 })
+      combatStore.inCombat = false
+      gameStore.markRoomCleared()
+      expect(questStore.questProgress['crossing-of-moria']!.stageIndex).toBe(2)
+
+      gameStore.enterRoom('east-gate')
+      expect(questStore.questProgress['crossing-of-moria']!.completed).toBe(true)
+      expect(gameStore.gameLog.map(l => l.text).join('\n')).toContain('Quest complete: The Crossing of Moria')
+    })
+
+    it('the chronicle quest tracks taking the tome and leaving Moria', async () => {
+      const { useQuestStore } = await import('../stores/questStore')
+      const gameStore = startGame()
+      const questStore = useQuestStore()
+      const playerStore = usePlayerStore()
+
+      gameStore.currentRoomId = 'chamber-of-records'
+      gameStore.enterRoom('chamber-of-records')
+      // room has enemies; force-clear for the test
+      useCombatStore().combatEnemies.forEach(e => { e.hp = 0 })
+      useCombatStore().inCombat = false
+      expect(questStore.questProgress['balins-chronicle']).toBeDefined()
+
+      gameStore.roomItems['chamber-of-records'] = ['balin-tome']
+      gameStore.handleCommand('take book of mazarbul')
+      expect(playerStore.inventory.some(i => i.id === 'balin-tome')).toBe(true)
+      expect(questStore.questProgress['balins-chronicle']!.stageIndex).toBe(1)
+
+      const goldBefore = playerStore.player!.gold
+      gameStore.enterRoom('east-gate')
+      expect(questStore.questProgress['balins-chronicle']!.completed).toBe(true)
+      expect(playerStore.player!.gold).toBe(goldBefore + 25)
+    })
+
+    it('the journal command lists active quests', () => {
+      const gameStore = startGame()
+      gameStore.handleCommand('quests')
+      const log = gameStore.gameLog.map(l => l.text).join('\n')
+      expect(log).toContain('Quest Journal')
+      expect(log).toContain('The Crossing of Moria')
+    })
+  })
+
+  describe('economy', () => {
+    it('sells loot to a trader for half value', () => {
+      const gameStore = startGame()
+      const playerStore = usePlayerStore()
+      gameStore.enterRoom('abandoned-forge') // Bombur the Ironmonger trades here
+
+      gameStore.handleCommand('take orcish blade')
+      const goldBefore = playerStore.player!.gold
+      gameStore.handleCommand('sell orcish blade')
+
+      expect(playerStore.inventory.some(i => i.id === 'orcish-blade')).toBe(false)
+      expect(playerStore.player!.gold).toBeGreaterThan(goldBefore)
+    })
+
+    it('refuses to sell equipped gear and to sell with no trader present', () => {
+      const gameStore = startGame()
+      gameStore.enterRoom('abandoned-forge')
+      gameStore.handleCommand('sell battle axe')
+      expect(gameStore.gameLog[gameStore.gameLog.length - 1]!.text).toContain('Unequip it first')
+
+      gameStore.enterRoom('first-hall')
+      useCombatStore().inCombat = false
+      gameStore.handleCommand('sell healing potion')
+      expect(gameStore.gameLog[gameStore.gameLog.length - 1]!.text).toContain('no one here to sell to')
+    })
+  })
+
+  describe('leveling perks', () => {
+    it('unlocks the level 3 class perk from quest XP', () => {
+      const gameStore = startGame()
+      const playerStore = usePlayerStore()
+      playerStore.player!.xp = 0
+      playerStore.player!.level = 2
+      playerStore.player!.xpToNext = 10
+
+      gameStore.pushLogs(playerStore.addXp(10))
+
+      expect(playerStore.player!.level).toBe(3)
+      expect(playerStore.player!.perks).toContain('stone-skin')
+      expect(gameStore.gameLog.map(l => l.text).join('\n')).toContain('Perk unlocked: Stone Skin')
+    })
+  })
 })

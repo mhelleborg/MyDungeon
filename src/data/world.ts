@@ -15,6 +15,7 @@ import { lothlorienNPCs, lothlorienRoomNPCs } from './lothlorienNPCs'
 import { lothlorienChoices } from './lothlorienChoices'
 import { lothlorienPuzzles, lothlorienRoomPuzzles } from './lothlorienPuzzles'
 import { lothlorienEncounters } from './lothlorienEncounters'
+import { moriaQuests, lothlorienQuests } from './quests'
 
 export const DEFAULT_REGION: RegionId = 'moria'
 
@@ -42,6 +43,7 @@ export const world: Record<RegionId, Region> = {
     roomPuzzles: moriaRoomPuzzles,
     encounters: moriaEncounters,
     roomInteractions: moriaRoomInteractions,
+    quests: moriaQuests,
   },
   lothlorien: {
     id: 'lothlorien',
@@ -70,6 +72,7 @@ export const world: Record<RegionId, Region> = {
     roomPuzzles: lothlorienRoomPuzzles,
     encounters: lothlorienEncounters,
     roomInteractions: lothlorienRoomInteractions,
+    quests: lothlorienQuests,
   },
 }
 
@@ -116,4 +119,5 @@ export const allChoices = mergeRecords(r => r.choices)
 export const allPuzzles = mergeRecords(r => r.puzzles)
 export const allRoomPuzzles = mergeRecords(r => r.roomPuzzles)
 export const allRoomInteractions = mergeRecords(r => r.roomInteractions)
+export const allQuests = mergeRecords(r => r.quests)
 export const encounterPool = Object.values(world).flatMap(r => r.encounters ?? [])
