@@ -3,8 +3,10 @@ import { ref } from 'vue'
 import type { PlayerClass } from '../types/character'
 import type { DifficultyLevel } from '../types/difficulty'
 import { difficultySettings } from '../types/difficulty'
-import { useGameStore, type ActId } from '../stores/gameStore'
+import { useGameStore } from '../stores/gameStore'
 import { usePlayerStore } from '../stores/playerStore'
+import type { RegionId } from '../types/region'
+import { world, DEFAULT_REGION } from '../data/world'
 
 const gameStore = useGameStore()
 const playerStore = usePlayerStore()
@@ -12,12 +14,11 @@ const playerStore = usePlayerStore()
 const name = ref('')
 const selectedClass = ref<PlayerClass>('ranger')
 const selectedDifficulty = ref<DifficultyLevel>('normal')
-const selectedAct = ref<ActId>('moria')
+const selectedAct = ref<RegionId>(DEFAULT_REGION)
 
-const acts: { id: ActId; label: string; desc: string }[] = [
-  { id: 'moria', label: 'Mines of Moria (Act I)', desc: 'Begin at the West-gate. The full journey through the dark.' },
-  { id: 'lothlorien', label: 'Lothlórien (Act II)', desc: 'Skip Moria. Start in Dimrill Dale, level-boosted with Moria\'s spoils.' },
-]
+const acts: { id: RegionId; label: string; desc: string }[] = Object.values(world)
+  .filter(region => region.startOption)
+  .map(region => ({ id: region.id, label: region.startOption!.label, desc: region.startOption!.desc }))
 
 const difficulties = [
   { id: 'easy' as DifficultyLevel, label: 'Easy', desc: 'Weaker enemies, more loot, bonus healing. For those who want to enjoy the story.' },

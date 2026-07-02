@@ -1,5 +1,5 @@
 import type { Item } from '../types/item'
-import { items } from '../data/items'
+import { itemDb as items } from '../data/world'
 import { rollDie } from './dice'
 
 export function rollLoot(lootTable: string[]): Item[] {

@@ -4,7 +4,7 @@ import { useGameStore } from '../stores/gameStore'
 import { usePlayerStore } from '../stores/playerStore'
 import { useCombatStore } from '../stores/combatStore'
 import { useStatsStore } from '../stores/statsStore'
-import { roomNPCs } from '../data/npcs'
+import { allRoomNPCs } from '../data/world'
 import type { BossPhase } from './handlers/bossHandler'
 
 const MAX_LOG_ENTRIES = 200
@@ -32,8 +32,9 @@ export function serialize(): SaveData {
     inventory: JSON.parse(JSON.stringify(playerStore.inventory)),
 
     // gameStore
-    phase: gameStore.phase,
-    currentAct: gameStore.currentAct,
+    // A finished run stays playable — the world remains open after victory
+    phase: gameStore.phase === 'victory' ? 'playing' : gameStore.phase,
+    currentRegionId: gameStore.currentRegionId,
     difficulty: gameStore.difficulty,
     currentRoomId: gameStore.currentRoomId,
     gameLog: gameStore.gameLog.slice(-MAX_LOG_ENTRIES),
@@ -60,6 +61,7 @@ export function serialize(): SaveData {
     activeChoice: gameStore.activeChoice ? JSON.parse(JSON.stringify(gameStore.activeChoice)) : null,
     activeDialogue: gameStore.activeDialogue ? JSON.parse(JSON.stringify(gameStore.activeDialogue)) : null,
     nimrodelFragments: [...gameStore.nimrodelFragments],
+    firedRoomEvents: setToArray(gameStore.firedRoomEvents),
     choicesMade: { ...gameStore.choicesMade },
     choiceConsequences: { ...gameStore.choiceConsequences },
     removedEnemies: { ...gameStore.removedEnemies },
@@ -110,7 +112,7 @@ export function deserialize(data: SaveData): void {
 
   // gameStore
   gameStore.phase = data.phase
-  gameStore.currentAct = data.currentAct ?? 'moria'
+  gameStore.currentRegionId = data.currentRegionId ?? 'moria'
   gameStore.difficulty = data.difficulty
   gameStore.currentRoomId = data.currentRoomId
   gameStore.gameLog = data.gameLog
@@ -137,6 +139,7 @@ export function deserialize(data: SaveData): void {
   gameStore.activeChoice = data.activeChoice ?? null
   gameStore.activeDialogue = data.activeDialogue ?? null
   gameStore.nimrodelFragments = new Set(data.nimrodelFragments ?? [])
+  gameStore.firedRoomEvents = new Set(data.firedRoomEvents ?? [])
   gameStore.choicesMade = data.choicesMade ?? {}
   gameStore.choiceConsequences = data.choiceConsequences ?? {}
   gameStore.removedEnemies = data.removedEnemies ?? {}
@@ -172,15 +175,39 @@ export function deserialize(data: SaveData): void {
   statsStore.choicesMadeCount = ss.choicesMadeCount ?? 0
   statsStore.mercyShown = ss.mercyShown ?? false
 
-  // Re-splice recruited companions out of roomNPCs
+  // Re-splice recruited companions out of room NPC lists
   for (const comp of data.companions) {
-    for (const [, npcIds] of Object.entries(roomNPCs)) {
+    for (const [, npcIds] of Object.entries(allRoomNPCs)) {
       const idx = npcIds.indexOf(comp.id)
       if (idx !== -1) {
         npcIds.splice(idx, 1)
       }
     }
   }
+}
+
+/**
+ * Migrate an older save to the current SAVE_VERSION.
+ * Returns null when the save is too old (or too new) to migrate.
+ */
+export function migrateSave(data: Record<string, unknown>): SaveData | null {
+  if (data.version === SAVE_VERSION) return data as unknown as SaveData
+  if (data.version === 3) {
+    // v3 → v4: acts became regions; once-only room events are now tracked
+    const firedRoomEvents: string[] = []
+    if (Array.isArray(data.visitedRooms) && data.visitedRooms.includes('east-gate')) {
+      firedRoomEvents.push('moria-crossed')
+    }
+    const migrated = {
+      ...data,
+      version: SAVE_VERSION,
+      currentRegionId: (data.currentAct as string) ?? 'moria',
+      firedRoomEvents,
+    }
+    delete (migrated as Record<string, unknown>).currentAct
+    return migrated as unknown as SaveData
+  }
+  return null
 }
 
 export function saveGame(): boolean {
@@ -197,8 +224,8 @@ export function loadGame(): boolean {
   try {
     const raw = localStorage.getItem(SAVE_KEY)
     if (!raw) return false
-    const data: SaveData = JSON.parse(raw)
-    if (data.version !== SAVE_VERSION) return false
+    const data = migrateSave(JSON.parse(raw))
+    if (!data) return false
     deserialize(data)
     return true
   } catch {
@@ -210,8 +237,7 @@ export function hasSaveGame(): boolean {
   try {
     const raw = localStorage.getItem(SAVE_KEY)
     if (!raw) return false
-    const data = JSON.parse(raw)
-    return data?.version === SAVE_VERSION
+    return migrateSave(JSON.parse(raw)) !== null
   } catch {
     return false
   }

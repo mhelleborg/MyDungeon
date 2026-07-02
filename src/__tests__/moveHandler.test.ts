@@ -52,4 +52,23 @@ describe('validateMove', () => {
     const result = validateMove(baseRoom, 'south', [], new Set(), undefined, revealed)
     expect(result.allowed).toBe(true)
   })
+
+  it('blocks blockedUntilCleared exits while the room is uncleared', () => {
+    const room: Room = {
+      ...baseRoom,
+      exits: [{ direction: 'east', targetRoomId: 'beyond', blockedUntilCleared: true, lockMessage: 'The Balrog blocks the way!' }],
+    }
+    const result = validateMove(room, 'east', [], new Set())
+    expect(result.allowed).toBe(false)
+    expect(result.logs[0]!.text).toBe('The Balrog blocks the way!')
+  })
+
+  it('allows blockedUntilCleared exits once the room is cleared', () => {
+    const room: Room = {
+      ...baseRoom,
+      exits: [{ direction: 'east', targetRoomId: 'beyond', blockedUntilCleared: true, lockMessage: 'The Balrog blocks the way!' }],
+    }
+    const result = validateMove(room, 'east', [], new Set(['test-room']))
+    expect(result.allowed).toBe(true)
+  })
 })

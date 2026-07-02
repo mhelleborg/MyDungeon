@@ -4,8 +4,8 @@ import { useGameStore } from '../stores/gameStore'
 import { usePlayerStore } from '../stores/playerStore'
 import { useCombatStore } from '../stores/combatStore'
 import { useStatsStore } from '../stores/statsStore'
-import { serialize, deserialize, hasSaveGame, deleteSave, saveGame, loadGame } from '../engine/saveLoad'
-import { SAVE_KEY } from '../types/save'
+import { serialize, deserialize, hasSaveGame, deleteSave, saveGame, loadGame, migrateSave } from '../engine/saveLoad'
+import { SAVE_KEY, SAVE_VERSION } from '../types/save'
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -191,6 +191,60 @@ describe('saveLoad', () => {
 
     it('loadGame returns false when no save exists', () => {
       expect(loadGame()).toBe(false)
+    })
+  })
+
+  describe('migrateSave', () => {
+    it('returns current-version saves unchanged', () => {
+      const data = serialize()
+      expect(migrateSave(data as unknown as Record<string, unknown>)).toBe(data)
+    })
+
+    it('migrates v3 saves: currentAct becomes currentRegionId', () => {
+      const v3 = { ...serialize(), version: 3, currentAct: 'lothlorien' } as Record<string, unknown>
+      delete v3.currentRegionId
+      delete v3.firedRoomEvents
+
+      const migrated = migrateSave(v3)
+      expect(migrated).not.toBeNull()
+      expect(migrated!.version).toBe(SAVE_VERSION)
+      expect(migrated!.currentRegionId).toBe('lothlorien')
+      expect((migrated as unknown as Record<string, unknown>).currentAct).toBeUndefined()
+    })
+
+    it('marks the Moria crossing as fired for v3 saves that reached the east-gate', () => {
+      const v3 = { ...serialize(), version: 3, currentAct: 'moria', visitedRooms: ['gates-of-moria', 'east-gate'] } as Record<string, unknown>
+      const migrated = migrateSave(v3)
+      expect(migrated!.firedRoomEvents).toContain('moria-crossed')
+    })
+
+    it('rejects unknown versions', () => {
+      expect(migrateSave({ version: 1 })).toBeNull()
+      expect(migrateSave({ version: 999 })).toBeNull()
+    })
+
+    it('loadGame accepts a v3 save via migration', () => {
+      const gameStore = useGameStore()
+      gameStore.currentRoomId = 'dimrill-dale'
+      const v3 = { ...serialize(), version: 3, currentAct: 'lothlorien' } as Record<string, unknown>
+      delete v3.currentRegionId
+      localStorage.setItem(SAVE_KEY, JSON.stringify(v3))
+
+      setActivePinia(createPinia())
+      const gameStore2 = useGameStore()
+
+      expect(loadGame()).toBe(true)
+      expect(gameStore2.currentRegionId).toBe('lothlorien')
+      expect(gameStore2.currentRoomId).toBe('dimrill-dale')
+    })
+  })
+
+  describe('victory keeps the world open', () => {
+    it('serializes a victory phase as playing so the run can continue', () => {
+      const gameStore = useGameStore()
+      gameStore.phase = 'victory'
+      const data = serialize()
+      expect(data.phase).toBe('playing')
     })
   })
 
