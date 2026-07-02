@@ -9,6 +9,7 @@ import CombatLog from '../components/CombatLog.vue'
 import MiniMap from '../components/MiniMap.vue'
 import WorldMap from '../components/WorldMap.vue'
 import QuestJournal from '../components/QuestJournal.vue'
+import GameMenu from '../components/GameMenu.vue'
 import AchievementToast from '../components/AchievementToast.vue'
 import FloaterLayer from '../components/FloaterLayer.vue'
 import { useGameStore } from '../stores/gameStore'
@@ -148,6 +149,12 @@ watch(
             : 'border-moria-border text-moria-info'"
           :title="soundOn ? 'Sound On' : 'Sound Off'"
         >{{ soundOn ? 'SND' : 'MUTE' }}</button>
+        <button
+          @click="gameStore.menuOpen = true"
+          class="text-[10px] md:text-xs px-1.5 py-0.5 md:px-2 md:py-1 border border-moria-border text-moria-info rounded
+                 hover:text-moria-highlight hover:border-moria-highlight/50 transition-colors cursor-pointer"
+          title="Menu (Esc)"
+        >☰ MENU</button>
       </div>
     </header>
 
@@ -230,6 +237,9 @@ watch(
 
     <!-- World map overlay -->
     <WorldMap v-if="gameStore.worldMapOpen" />
+
+    <!-- Game menu overlay -->
+    <GameMenu v-if="gameStore.menuOpen" />
 
     <!-- Game Over overlay -->
     <div v-if="gameStore.phase === 'game-over'" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 overflow-y-auto p-4">

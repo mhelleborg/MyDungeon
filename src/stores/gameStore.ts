@@ -98,6 +98,8 @@ export const useGameStore = defineStore('game', () => {
   const currentRegionId = ref<RegionId>(DEFAULT_REGION)
   /** World map overlay visibility (transient UI state, not saved) */
   const worldMapOpen = ref(false)
+  /** Game menu overlay visibility (transient UI state, not saved) */
+  const menuOpen = ref(false)
   /** Most recently visited waypoint — where the player rises after defeat */
   const lastWaypointId = ref<string>('')
   /** Ids of once-only room events that have already fired */
@@ -1872,6 +1874,7 @@ export const useGameStore = defineStore('game', () => {
     currentRegion,
     firedRoomEvents,
     worldMapOpen,
+    menuOpen,
     lastWaypointId,
     activeDialogue,
     nimrodelFragments,
