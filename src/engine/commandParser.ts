@@ -84,6 +84,11 @@ export function parseCommand(input: string): ParsedCommand {
     return { type: 'rest', raw }
   }
 
+  // Fast travel
+  if (verb === 'travel' || verb === 'journey') {
+    return { type: 'travel', target: rest || undefined, raw }
+  }
+
   // NPC interaction
   if (verb === 'talk' || verb === 'speak') {
     return { type: 'talk', target: rest || undefined, raw }

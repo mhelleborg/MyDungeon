@@ -123,4 +123,76 @@ describe('open-world smoke test', () => {
     gameStore.handleCommand('east')
     expect(gameStore.currentRoomId).toBe('east-gate')
   })
+
+  describe('fast travel', () => {
+    it('announces waypoint discovery on first visit', () => {
+      const gameStore = startGame()
+      expect(gameStore.gameLog.map(l => l.text).join('\n')).toContain('The Doors of Durin is now a waypoint')
+    })
+
+    it('travels across regions from a safe room (no road event)', () => {
+      const gameStore = startGame()
+      gameStore.enterRoom('east-gate')
+      gameStore.enterRoom('dimrill-dale')
+      expect(gameStore.currentRegionId).toBe('lothlorien')
+
+      const rand = vi.spyOn(Math, 'random').mockReturnValue(0.9)
+      gameStore.handleCommand('travel doors of durin')
+      rand.mockRestore()
+
+      expect(gameStore.currentRoomId).toBe('gates-of-moria')
+      expect(gameStore.currentRegionId).toBe('moria')
+      const log = gameStore.gameLog.map(l => l.text).join('\n')
+      expect(log).toContain('You set out for The Doors of Durin')
+      expect(useCombatStore().inCombat).toBe(false)
+    })
+
+    it('a road ambush starts combat with the destination region ambushers', () => {
+      const gameStore = startGame()
+      gameStore.enterRoom('east-gate')
+
+      const rand = vi.spyOn(Math, 'random').mockReturnValue(0.05)
+      gameStore.handleCommand('travel doors of durin')
+      rand.mockRestore()
+
+      expect(gameStore.currentRoomId).toBe('gates-of-moria')
+      const combatStore = useCombatStore()
+      expect(combatStore.inCombat).toBe(true)
+      expect(combatStore.combatEnemies[0]!.id).toBe('goblin')
+    })
+
+    it('refuses travel to undiscovered waypoints', () => {
+      const gameStore = startGame()
+      gameStore.handleCommand('travel dimrill dale')
+      expect(gameStore.currentRoomId).toBe('gates-of-moria')
+      expect(gameStore.gameLog[gameStore.gameLog.length - 1]!.text).toContain('no waypoint called')
+    })
+
+    it('refuses travel during combat', () => {
+      const gameStore = startGame()
+      gameStore.enterRoom('east-gate')
+      const combatStore = useCombatStore()
+      combatStore.inCombat = true
+      gameStore.handleCommand('travel doors of durin')
+      expect(gameStore.currentRoomId).toBe('east-gate')
+      expect(gameStore.gameLog[gameStore.gameLog.length - 1]!.text).toContain('cannot travel')
+      combatStore.inCombat = false
+    })
+
+    it('bare travel lists the places you know', () => {
+      const gameStore = startGame()
+      gameStore.enterRoom('east-gate')
+      gameStore.handleCommand('travel')
+      const log = gameStore.gameLog.map(l => l.text).join('\n')
+      expect(log).toContain('The Doors of Durin — The Mines of Moria')
+      expect(log).toContain('The East Gate — The Mines of Moria')
+    })
+
+    it('the map command opens the world map overlay', () => {
+      const gameStore = startGame()
+      expect(gameStore.worldMapOpen).toBe(false)
+      gameStore.handleCommand('map')
+      expect(gameStore.worldMapOpen).toBe(true)
+    })
+  })
 })

@@ -32,6 +32,7 @@ import { attemptPuzzle, getPuzzleHint } from '../engine/handlers/puzzleHandler'
 import { trapDestroyText } from '../data/roomInteractions'
 import { examineInteraction, resolveSearch } from '../engine/handlers/interactHandler'
 import { eligibleRoomEvents } from '../engine/handlers/roomEventHandler'
+import { listDiscoveredWaypoints, validateTravel, rollRoadEvent, describeJourney } from '../engine/handlers/travelHandler'
 import { playSound } from '../engine/audio'
 import { checkRecruitment, rollCompanionComment } from '../engine/handlers/companionHandler'
 import { difficulty, currentRoomId, roomItems, companions, getDifficultyMultipliers, dropItemToGround } from './gameContext'
@@ -93,6 +94,8 @@ export const useGameStore = defineStore('game', () => {
   const addedEnemies = ref<Record<string, { enemyId: string; count: number }[]>>({})
   /** Region the player is currently in */
   const currentRegionId = ref<RegionId>(DEFAULT_REGION)
+  /** World map overlay visibility (transient UI state, not saved) */
+  const worldMapOpen = ref(false)
   /** Ids of once-only room events that have already fired */
   const firedRoomEvents = ref<Set<string>>(new Set())
   /** Active branching dialogue */
@@ -275,6 +278,11 @@ export const useGameStore = defineStore('game', () => {
     const cleared = clearedRooms.value.has(roomId)
     const desc = describeRoom(room, dark, cleared, groundItemNames(roomId), revealedExits.value)
     pushLogs(desc.logs)
+
+    // Waypoint discovery
+    if (wasNew && room.waypoint) {
+      log(`✦ ${room.waypointLabel ?? room.name} is now a waypoint on your map. Type "travel" to journey between known waypoints, or "map" to see the world.`, 'system')
+    }
 
     // Reveal light-gated hidden exits
     if (!dark) {
@@ -469,6 +477,7 @@ export const useGameStore = defineStore('game', () => {
       case 'flee':    handleFlee(); break
       case 'sneak':   handleSneak(cmd); break
       case 'rest':    handleRest(); break
+      case 'travel':  handleTravel(cmd); break
       case 'talk':    handleTalk(cmd); break
       case 'trade':   handleTrade(cmd); break
       case 'say':     handleSay(cmd); break
@@ -480,7 +489,7 @@ export const useGameStore = defineStore('game', () => {
       case 'help':    handleHelp(); break
       case 'save':    handleSave(); break
       case 'load':    handleLoad(); break
-      case 'map':     log('Check the minimap on the right side of your screen.', 'info'); break
+      case 'map':     worldMapOpen.value = true; log('You unfold your map of the road.', 'info'); break
       case 'unknown': {
         // Check for boss fight special commands
         const combatStore2 = useCombatStore()
@@ -1403,6 +1412,54 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  // ── Travel ───────────────────────────────────────────────
+  function handleTravel(cmd: ParsedCommand) {
+    const combatStore = useCombatStore()
+    const playerStore = usePlayerStore()
+    const room = currentRoom.value
+    const hostilesPresent = !!(room?.enemies && room.enemies.length > 0 && !clearedRooms.value.has(room.id))
+    const busy = !!activeChoice.value || !!activeDialogue.value
+
+    const waypoints = listDiscoveredWaypoints(Object.values(world), visitedRooms.value)
+    const check = validateTravel(cmd.target, waypoints, currentRoomId.value, {
+      inCombat: combatStore.inCombat,
+      hostilesPresent,
+      busy,
+    })
+    pushLogs(check.logs)
+    if (!check.allowed || !check.target) return
+
+    const target = check.target
+    const destRegion = getRegion(target.regionId)
+    const crossing = target.regionId !== currentRegionId.value
+    pushLogs(describeJourney(target, destRegion, crossing))
+
+    const roadEvent = rollRoadEvent()
+
+    playSound('door')
+    worldMapOpen.value = false
+    enterRoom(target.roomId)
+
+    // Something happened on the last stretch of the road
+    if (roadEvent === 'ambush' && destRegion?.roadAmbush && !combatStore.inCombat) {
+      log('But the road held one last peril — enemies spring from hiding as you arrive!', 'combat')
+      pushLogs(combatStore.startCombat(destRegion.roadAmbush, isDark(target.roomId)))
+      checkDeath()
+    } else if (roadEvent === 'encounter' && !combatStore.inCombat && playerStore.player) {
+      const enc = selectEncounter(encounterPool, seenEncounters.value)
+      if (enc) {
+        log('On the road, you cross paths with something unexpected...', 'narrative')
+        seenEncounters.value.add(enc.id)
+        const result = resolveEncounter(enc, playerStore.player.abilities)
+        pushLogs(result.logs)
+        applyEncounterRewards(result)
+        if (result.activeEncounter) {
+          activeEncounter.value = result.activeEncounter
+        }
+      }
+    }
+  }
+
   // ── Craft ────────────────────────────────────────────────
   function handleCraft(cmd: ParsedCommand) {
     const combatStore = useCombatStore()
@@ -1673,6 +1730,8 @@ export const useGameStore = defineStore('game', () => {
     log('flee - Attempt to escape combat (DEX check)', 'info')
     log('sneak <direction> - Sneak into a room (DEX check)', 'info')
     log('rest - Rest and recover HP (once per room)', 'info')
+    log('travel [place] - Fast travel to a discovered waypoint', 'info')
+    log('map (or M) - Open the world map', 'info')
     log('talk [name] - Talk to an NPC', 'info')
     log('trade/buy [item] - Trade with an NPC', 'info')
     log('say <word> - Speak a word aloud (for puzzles)', 'info')
@@ -1726,6 +1785,7 @@ export const useGameStore = defineStore('game', () => {
     currentRegionId,
     currentRegion,
     firedRoomEvents,
+    worldMapOpen,
     activeDialogue,
     nimrodelFragments,
     getDifficultyMultipliers,

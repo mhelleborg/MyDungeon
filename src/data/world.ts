@@ -24,6 +24,14 @@ export const world: Record<RegionId, Region> = {
     name: 'The Mines of Moria',
     entryRoomId: STARTING_ROOM,
     startOption: { label: 'Mines of Moria (Act I)', desc: 'Begin at the West-gate. The full journey through the dark.' },
+    mapPosition: { x: 390, y: 300 },
+    travelFlavor: [
+      'You pass once more into the silence of Khazad-dûm, keeping to halls and stairways you have learned to trust.',
+      'Your footsteps echo in the great dark, but the ways are known to you now, and the shadows hold fewer surprises.',
+    ],
+    roadAmbush: [
+      { enemyId: 'goblin', count: 2 },
+    ],
     rooms: moriaRooms,
     enemies: moriaEnemies,
     items: moriaItems,
@@ -44,6 +52,14 @@ export const world: Record<RegionId, Region> = {
       { text: 'You leave the darkness of Moria behind. The world opens before you in golden light.', logType: 'narrative' },
     ],
     startOption: { label: 'Lothlórien (Act II)', desc: 'Skip Moria. Start in Dimrill Dale, level-boosted with Moria\'s spoils.' },
+    mapPosition: { x: 585, y: 390 },
+    travelFlavor: [
+      'You follow the Silverlode beneath the golden eaves, along elven paths that open before those who have walked them.',
+      'Mallorn leaves drift down around you as you travel the known roads of the Golden Wood.',
+    ],
+    roadAmbush: [
+      { enemyId: 'orc-scout', count: 2 },
+    ],
     rooms: lothlorienRooms,
     enemies: lothlorienEnemies,
     items: lothlorienItems,

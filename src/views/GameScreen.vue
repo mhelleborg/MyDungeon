@@ -7,6 +7,7 @@ import PlayerStats from '../components/PlayerStats.vue'
 import InventoryPanel from '../components/InventoryPanel.vue'
 import CombatLog from '../components/CombatLog.vue'
 import MiniMap from '../components/MiniMap.vue'
+import WorldMap from '../components/WorldMap.vue'
 import AchievementToast from '../components/AchievementToast.vue'
 import FloaterLayer from '../components/FloaterLayer.vue'
 import { useGameStore } from '../stores/gameStore'
@@ -171,6 +172,11 @@ watch(
         <PlayerStats />
         <InventoryPanel />
         <MiniMap />
+        <button
+          @click="gameStore.worldMapOpen = true"
+          class="w-full px-3 py-2 border border-moria-border rounded text-moria-highlight text-xs font-bold tracking-wider
+                 hover:border-moria-highlight hover:bg-moria-highlight/10 transition-colors cursor-pointer"
+        >🗺 WORLD MAP <span class="text-moria-info font-normal">(M)</span></button>
       </div>
     </div>
 
@@ -190,7 +196,14 @@ watch(
       <div v-if="mobileTab" class="max-h-[40vh] overflow-y-auto p-2 bg-moria-panel/80 border-t border-moria-border/50">
         <PlayerStats v-if="mobileTab === 'stats'" />
         <InventoryPanel v-if="mobileTab === 'inv'" />
-        <MiniMap v-if="mobileTab === 'map'" />
+        <template v-if="mobileTab === 'map'">
+          <MiniMap />
+          <button
+            @click="gameStore.worldMapOpen = true; mobileTab = null"
+            class="w-full mt-2 px-3 py-2 border border-moria-border rounded text-moria-highlight text-xs font-bold tracking-wider
+                   hover:border-moria-highlight transition-colors cursor-pointer"
+          >🗺 WORLD MAP</button>
+        </template>
       </div>
     </div>
 
@@ -211,6 +224,9 @@ watch(
 
     <AchievementToast />
     <FloaterLayer />
+
+    <!-- World map overlay -->
+    <WorldMap v-if="gameStore.worldMapOpen" />
 
     <!-- Game Over overlay -->
     <div v-if="gameStore.phase === 'game-over'" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 overflow-y-auto p-4">

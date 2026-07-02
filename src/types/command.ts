@@ -12,6 +12,7 @@ export type CommandType =
   | 'flee'
   | 'sneak'
   | 'rest'
+  | 'travel'
   | 'talk'
   | 'trade'
   | 'say'

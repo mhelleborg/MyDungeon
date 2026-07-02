@@ -74,6 +74,10 @@ export interface Room {
   events?: RoomEvent[]
   /** Crafting is available here (the `craft` command and forge UI) */
   craftingStation?: boolean
+  /** Once visited, this room becomes a fast-travel destination */
+  waypoint?: boolean
+  /** Short name shown on the world map / travel list (defaults to room name) */
+  waypointLabel?: string
   visited?: boolean
   dark?: boolean     // requires light source
   trap?: Trap

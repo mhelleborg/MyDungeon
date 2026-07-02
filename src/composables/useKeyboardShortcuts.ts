@@ -15,6 +15,15 @@ export function useKeyboardShortcuts() {
     if (gameStore.phase !== 'playing') return
     if (isInputFocused()) return
 
+    // While the world map is open, only allow closing it
+    if (gameStore.worldMapOpen) {
+      if (e.key.toLowerCase() === 'm' || e.key === 'Escape') {
+        e.preventDefault()
+        gameStore.worldMapOpen = false
+      }
+      return
+    }
+
     // Focus command input
     if (e.key === '/') {
       e.preventDefault()
@@ -45,6 +54,7 @@ export function useKeyboardShortcuts() {
     if (key === 'l') { gameStore.handleCommand('look'); return }
     if (key === 'i') { gameStore.handleCommand('inventory'); return }
     if (key === 'h') { gameStore.handleCommand('help'); return }
+    if (key === 'm') { gameStore.worldMapOpen = true; return }
 
     // Combat shortcuts
     if (combatStore.inCombat) {

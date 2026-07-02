@@ -17,6 +17,8 @@ export const rooms: Record<string, Room> = {
       { direction: 'west', targetRoomId: 'hidden-shrine', hidden: true, revealMethod: 'puzzle' },
     ],
     items: ['torch'],
+    waypoint: true,
+    waypointLabel: 'The Doors of Durin',
     gridX: 0,
     gridY: 4,
   },
@@ -123,6 +125,8 @@ export const rooms: Record<string, Room> = {
     ],
     items: ['orcish-blade'],
     craftingStation: true,
+    waypoint: true,
+    waypointLabel: 'The Abandoned Forge',
     gridX: 2,
     gridY: 3,
   },
@@ -410,6 +414,8 @@ export const rooms: Record<string, Room> = {
     exits: [
       { direction: 'south', targetRoomId: 'dimrill-dale' },
     ],
+    waypoint: true,
+    waypointLabel: 'The East Gate',
     events: [
       {
         id: 'moria-crossed',

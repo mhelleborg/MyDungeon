@@ -16,6 +16,8 @@ export const lothlorienRooms: Record<string, Room> = {
       { direction: 'south', targetRoomId: 'silver-river-ford' },
     ],
     items: ['moria-chronicle'],
+    waypoint: true,
+    waypointLabel: 'Dimrill Dale',
     gridX: 4,
     gridY: 0,
   },
@@ -220,6 +222,8 @@ export const lothlorienRooms: Record<string, Room> = {
       { direction: 'north', targetRoomId: 'north-stair' },
       { direction: 'west', targetRoomId: 'cerin-amroth' },
     ],
+    waypoint: true,
+    waypointLabel: 'Caras Galadhon',
     gridX: 0,
     gridY: 4,
   },
@@ -327,6 +331,8 @@ export const lothlorienRooms: Record<string, Room> = {
     exits: [
       { direction: 'north', targetRoomId: 'celeborn-hall' },
     ],
+    waypoint: true,
+    waypointLabel: 'The Farewell Lawn',
     events: [
       {
         id: 'lothlorien-farewell',
