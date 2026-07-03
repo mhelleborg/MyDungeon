@@ -34,6 +34,7 @@ export const lothlorienRooms: Record<string, Room> = {
     exits: [
       { direction: 'north', targetRoomId: 'dimrill-dale' },
       { direction: 'south', targetRoomId: 'nimrodel-stream' },
+      { direction: 'east', targetRoomId: 'anduin-crossing' },
     ],
     gridX: 4,
     gridY: 1,

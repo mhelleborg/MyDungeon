@@ -40,6 +40,14 @@ import {
   rohanRoomNPCs,
   rohanQuests,
 } from './rohan'
+import {
+  mirkwoodRooms,
+  mirkwoodEnemies,
+  mirkwoodItems,
+  mirkwoodNPCs,
+  mirkwoodRoomNPCs,
+  mirkwoodQuests,
+} from './mirkwood'
 
 export const DEFAULT_REGION: RegionId = 'moria'
 
@@ -171,6 +179,29 @@ export const world: Record<RegionId, Region> = {
     npcs: rohanNPCs,
     roomNPCs: rohanRoomNPCs,
     quests: rohanQuests,
+  },
+  mirkwood: {
+    id: 'mirkwood',
+    name: 'Mirkwood',
+    entryRoomId: 'anduin-crossing',
+    arrivalLogs: [
+      { text: '— Mirkwood —', logType: 'system' },
+      { text: 'The Great River lies behind you, and before you the eaves of Mirkwood rise like a wall of standing night. The trees lean close, and listen. Keep to the path.', logType: 'narrative' },
+    ],
+    mapPosition: { x: 760, y: 150 },
+    travelFlavor: [
+      'You keep to the elf-path beneath the black boughs, and do not stray, and do not drink of the stream.',
+      'The darkness of the forest presses close on either hand, but the old road holds true beneath your feet.',
+    ],
+    roadAmbush: [
+      { enemyId: 'spider-lurker', count: 2 },
+    ],
+    rooms: mirkwoodRooms,
+    enemies: mirkwoodEnemies,
+    items: mirkwoodItems,
+    npcs: mirkwoodNPCs,
+    roomNPCs: mirkwoodRoomNPCs,
+    quests: mirkwoodQuests,
   },
 }
 
