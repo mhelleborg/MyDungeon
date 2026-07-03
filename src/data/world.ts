@@ -32,6 +32,14 @@ import {
   fangornRoomNPCs,
   fangornQuests,
 } from './fangorn'
+import {
+  rohanRooms,
+  rohanEnemies,
+  rohanItems,
+  rohanNPCs,
+  rohanRoomNPCs,
+  rohanQuests,
+} from './rohan'
 
 export const DEFAULT_REGION: RegionId = 'moria'
 
@@ -140,6 +148,29 @@ export const world: Record<RegionId, Region> = {
     npcs: fangornNPCs,
     roomNPCs: fangornRoomNPCs,
     quests: fangornQuests,
+  },
+  rohan: {
+    id: 'rohan',
+    name: 'Rohan & Edoras',
+    entryRoomId: 'wold-road',
+    arrivalLogs: [
+      { text: '— Rohan, the Riddermark —', logType: 'system' },
+      { text: 'The land of the Horse-lords opens before you, grass to the horizon under an enormous sky. Far south, beneath the White Mountains, a roof of gold catches the sun.', logType: 'narrative' },
+    ],
+    mapPosition: { x: 380, y: 590 },
+    travelFlavor: [
+      'You ride the green leagues of the Riddermark, keeping to the beaten road and the open ground where nothing can come at you unseen.',
+      'The wind of the Mark is at your back, and the grass bows in long waves before you as you go.',
+    ],
+    roadAmbush: [
+      { enemyId: 'warg-rider', count: 1 },
+    ],
+    rooms: rohanRooms,
+    enemies: rohanEnemies,
+    items: rohanItems,
+    npcs: rohanNPCs,
+    roomNPCs: rohanRoomNPCs,
+    quests: rohanQuests,
   },
 }
 
