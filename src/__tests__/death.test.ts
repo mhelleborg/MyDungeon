@@ -33,7 +33,7 @@ function setupPlayer(hp = 20) {
   return playerStore
 }
 
-describe('death handling', () => {
+describe('death handling (rise at last waypoint)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorageMock.clear()
@@ -41,15 +41,31 @@ describe('death handling', () => {
   })
 
   describe('checkDeath', () => {
-    it('sets phase to game-over when player HP is 0', () => {
-      setupPlayer(0)
+    it('revives the player at the last waypoint at half HP', () => {
+      const playerStore = setupPlayer(0)
       const gameStore = useGameStore()
       gameStore.phase = 'playing'
+      gameStore.lastWaypointId = 'gates-of-moria'
+      gameStore.currentRoomId = 'goblin-tunnels'
 
       const died = gameStore.checkDeath()
 
       expect(died).toBe(true)
-      expect(gameStore.phase).toBe('game-over')
+      expect(gameStore.phase).toBe('playing')
+      expect(gameStore.currentRoomId).toBe('gates-of-moria')
+      expect(playerStore.player!.hp).toBe(Math.ceil(playerStore.player!.maxHp / 2))
+    })
+
+    it('takes a fifth of the player\'s gold', () => {
+      const playerStore = setupPlayer(0)
+      playerStore.player!.gold = 100
+      const gameStore = useGameStore()
+      gameStore.phase = 'playing'
+      gameStore.lastWaypointId = 'gates-of-moria'
+
+      gameStore.checkDeath()
+
+      expect(playerStore.player!.gold).toBe(80)
     })
 
     it('does nothing when player is alive', () => {
@@ -63,70 +79,58 @@ describe('death handling', () => {
       expect(gameStore.phase).toBe('playing')
     })
 
-    it('ends combat when player dies during combat', () => {
+    it('ends combat when the player falls', () => {
       setupPlayer(0)
       const gameStore = useGameStore()
       const combatStore = useCombatStore()
       gameStore.phase = 'playing'
+      gameStore.lastWaypointId = 'gates-of-moria'
       combatStore.inCombat = true
 
       gameStore.checkDeath()
 
       expect(combatStore.inCombat).toBe(false)
-      expect(gameStore.phase).toBe('game-over')
+      expect(gameStore.phase).toBe('playing')
     })
 
-    it('deletes save when player dies', () => {
+    it('keeps the save when the player falls', () => {
       setupPlayer(20)
       const gameStore = useGameStore()
       gameStore.phase = 'playing'
+      gameStore.lastWaypointId = 'gates-of-moria'
 
       saveGame()
       expect(hasSaveGame()).toBe(true)
 
-      // Now kill the player
       const playerStore = usePlayerStore()
       playerStore.player!.hp = 0
-
       gameStore.checkDeath()
 
-      expect(hasSaveGame()).toBe(false)
-    })
-  })
-
-  describe('handleCommand rejects commands when dead', () => {
-    it('blocks commands when phase is game-over', () => {
-      setupPlayer(0)
-      const gameStore = useGameStore()
-      gameStore.phase = 'game-over'
-
-      gameStore.handleCommand('look')
-
-      const lastLog = gameStore.gameLog[gameStore.gameLog.length - 1]
-      expect(lastLog?.text).toBe('You are dead. The darkness claims you.')
+      expect(hasSaveGame()).toBe(true)
     })
 
-    it('blocks commands when player HP is 0', () => {
+    it('falls back to the region entry room with no waypoint visited', () => {
       setupPlayer(0)
       const gameStore = useGameStore()
       gameStore.phase = 'playing'
+      gameStore.lastWaypointId = ''
+      gameStore.currentRoomId = 'goblin-tunnels'
 
-      gameStore.handleCommand('look')
+      gameStore.checkDeath()
 
-      const lastLog = gameStore.gameLog[gameStore.gameLog.length - 1]
-      expect(lastLog?.text).toBe('You are dead. The darkness claims you.')
+      expect(gameStore.currentRoomId).toBe('gates-of-moria')
     })
   })
 
   describe('combat death via attack', () => {
-    it('triggers game-over after fatal enemy attack', () => {
+    it('revives after a fatal enemy attack', () => {
       const playerStore = setupPlayer(1)
       const gameStore = useGameStore()
       const combatStore = useCombatStore()
       gameStore.phase = 'playing'
-      gameStore.currentRoomId = 'gates-of-moria'
+      gameStore.currentRoomId = 'goblin-tunnels'
+      gameStore.lastWaypointId = 'gates-of-moria'
 
-      // Start combat with a weak enemy
       combatStore.startCombat([{ enemyId: 'goblin', count: 1 }])
       expect(combatStore.inCombat).toBe(true)
 
@@ -135,12 +139,11 @@ describe('death handling', () => {
 
       gameStore.handleCommand('attack')
 
-      // Player should be dead (1 HP, any hit kills)
+      // If the enemy killed the player, they should have risen at the waypoint
       if (playerStore.player!.hp <= 0) {
-        expect(gameStore.phase).toBe('game-over')
-        expect(combatStore.inCombat).toBe(false)
+        throw new Error('player should have been revived')
       }
-      // If somehow survived (very unlikely with 1 HP), that's also fine
+      expect(gameStore.phase).toBe('playing')
     })
   })
 

@@ -1,10 +1,11 @@
-import type { Room } from './room'
+import type { Room, RoomEnemy } from './room'
 import type { Item } from './item'
 import type { Enemy } from './character'
 import type { NPC } from './npc'
 import type { Choice } from './choice'
 import type { Puzzle } from './puzzle'
 import type { Encounter } from './encounter'
+import type { Quest } from './quest'
 import type { RoomInteraction } from '../data/roomInteractions'
 import type { GameLogEntry } from './command'
 
@@ -24,6 +25,12 @@ export interface Region {
   arrivalLogs?: { text: string; logType: GameLogEntry['type'] }[]
   /** When set, the region is offered as a starting point on character select */
   startOption?: { label: string; desc: string }
+  /** Position of the region's node on the world map (0–1000 × 0–640 SVG space) */
+  mapPosition?: { x: number; y: number }
+  /** Flavor lines logged while travelling to a waypoint in this region */
+  travelFlavor?: string[]
+  /** Enemies that may waylay the player on the road to this region */
+  roadAmbush?: RoomEnemy[]
   rooms: Record<string, Room>
   enemies?: Record<string, Enemy>
   items?: Record<string, Item>
@@ -34,4 +41,5 @@ export interface Region {
   roomPuzzles?: Record<string, string[]>
   encounters?: Encounter[]
   roomInteractions?: Record<string, RoomInteraction[]>
+  quests?: Record<string, Quest>
 }

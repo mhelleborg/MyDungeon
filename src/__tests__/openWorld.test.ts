@@ -123,4 +123,257 @@ describe('open-world smoke test', () => {
     gameStore.handleCommand('east')
     expect(gameStore.currentRoomId).toBe('east-gate')
   })
+
+  describe('fast travel', () => {
+    it('announces waypoint discovery on first visit', () => {
+      const gameStore = startGame()
+      expect(gameStore.gameLog.map(l => l.text).join('\n')).toContain('The Doors of Durin is now a waypoint')
+    })
+
+    it('travels across regions from a safe room (no road event)', () => {
+      const gameStore = startGame()
+      gameStore.enterRoom('east-gate')
+      gameStore.enterRoom('dimrill-dale')
+      expect(gameStore.currentRegionId).toBe('lothlorien')
+
+      const rand = vi.spyOn(Math, 'random').mockReturnValue(0.9)
+      gameStore.handleCommand('travel doors of durin')
+      rand.mockRestore()
+
+      expect(gameStore.currentRoomId).toBe('gates-of-moria')
+      expect(gameStore.currentRegionId).toBe('moria')
+      const log = gameStore.gameLog.map(l => l.text).join('\n')
+      expect(log).toContain('You set out for The Doors of Durin')
+      expect(useCombatStore().inCombat).toBe(false)
+    })
+
+    it('a road ambush starts combat with the destination region ambushers', () => {
+      const gameStore = startGame()
+      gameStore.enterRoom('east-gate')
+
+      const rand = vi.spyOn(Math, 'random').mockReturnValue(0.05)
+      gameStore.handleCommand('travel doors of durin')
+      rand.mockRestore()
+
+      expect(gameStore.currentRoomId).toBe('gates-of-moria')
+      const combatStore = useCombatStore()
+      expect(combatStore.inCombat).toBe(true)
+      expect(combatStore.combatEnemies[0]!.id).toBe('goblin')
+    })
+
+    it('refuses travel to undiscovered waypoints', () => {
+      const gameStore = startGame()
+      gameStore.handleCommand('travel dimrill dale')
+      expect(gameStore.currentRoomId).toBe('gates-of-moria')
+      expect(gameStore.gameLog[gameStore.gameLog.length - 1]!.text).toContain('no waypoint called')
+    })
+
+    it('refuses travel during combat', () => {
+      const gameStore = startGame()
+      gameStore.enterRoom('east-gate')
+      const combatStore = useCombatStore()
+      combatStore.inCombat = true
+      gameStore.handleCommand('travel doors of durin')
+      expect(gameStore.currentRoomId).toBe('east-gate')
+      expect(gameStore.gameLog[gameStore.gameLog.length - 1]!.text).toContain('cannot travel')
+      combatStore.inCombat = false
+    })
+
+    it('bare travel lists the places you know', () => {
+      const gameStore = startGame()
+      gameStore.enterRoom('east-gate')
+      gameStore.handleCommand('travel')
+      const log = gameStore.gameLog.map(l => l.text).join('\n')
+      expect(log).toContain('The Doors of Durin — The Mines of Moria')
+      expect(log).toContain('The East Gate — The Mines of Moria')
+    })
+
+    it('the map command opens the world map overlay', () => {
+      const gameStore = startGame()
+      expect(gameStore.worldMapOpen).toBe(false)
+      gameStore.handleCommand('map')
+      expect(gameStore.worldMapOpen).toBe(true)
+    })
+  })
+
+  describe('quests', () => {
+    it('the main quest starts at the gates and advances through Moria', async () => {
+      const { useQuestStore } = await import('../stores/questStore')
+      const gameStore = startGame()
+      const questStore = useQuestStore()
+
+      expect(questStore.questProgress['crossing-of-moria']).toBeDefined()
+      expect(gameStore.gameLog.map(l => l.text).join('\n')).toContain('New quest: The Crossing of Moria')
+
+      gameStore.enterRoom('bridge-of-khazad-dum') // starts balrog combat
+      expect(questStore.questProgress['crossing-of-moria']!.stageIndex).toBe(1)
+
+      // Simulate clearing the bridge
+      const combatStore = useCombatStore()
+      combatStore.combatEnemies.forEach(e => { e.hp = 0 })
+      combatStore.inCombat = false
+      gameStore.markRoomCleared()
+      expect(questStore.questProgress['crossing-of-moria']!.stageIndex).toBe(2)
+
+      gameStore.enterRoom('east-gate')
+      expect(questStore.questProgress['crossing-of-moria']!.completed).toBe(true)
+      expect(gameStore.gameLog.map(l => l.text).join('\n')).toContain('Quest complete: The Crossing of Moria')
+    })
+
+    it('the chronicle quest tracks taking the tome and leaving Moria', async () => {
+      const { useQuestStore } = await import('../stores/questStore')
+      const gameStore = startGame()
+      const questStore = useQuestStore()
+      const playerStore = usePlayerStore()
+
+      gameStore.currentRoomId = 'chamber-of-records'
+      gameStore.enterRoom('chamber-of-records')
+      // room has enemies; force-clear for the test
+      useCombatStore().combatEnemies.forEach(e => { e.hp = 0 })
+      useCombatStore().inCombat = false
+      expect(questStore.questProgress['balins-chronicle']).toBeDefined()
+
+      gameStore.roomItems['chamber-of-records'] = ['balin-tome']
+      gameStore.handleCommand('take book of mazarbul')
+      expect(playerStore.inventory.some(i => i.id === 'balin-tome')).toBe(true)
+      expect(questStore.questProgress['balins-chronicle']!.stageIndex).toBe(1)
+
+      const goldBefore = playerStore.player!.gold
+      gameStore.enterRoom('east-gate')
+      expect(questStore.questProgress['balins-chronicle']!.completed).toBe(true)
+      expect(playerStore.player!.gold).toBe(goldBefore + 25)
+    })
+
+    it('the journal command lists active quests', () => {
+      const gameStore = startGame()
+      gameStore.handleCommand('quests')
+      const log = gameStore.gameLog.map(l => l.text).join('\n')
+      expect(log).toContain('Quest Journal')
+      expect(log).toContain('The Crossing of Moria')
+    })
+  })
+
+  describe('economy', () => {
+    it('sells loot to a trader for half value', () => {
+      const gameStore = startGame()
+      const playerStore = usePlayerStore()
+      gameStore.enterRoom('abandoned-forge') // Bombur the Ironmonger trades here
+
+      gameStore.handleCommand('take orcish blade')
+      const goldBefore = playerStore.player!.gold
+      gameStore.handleCommand('sell orcish blade')
+
+      expect(playerStore.inventory.some(i => i.id === 'orcish-blade')).toBe(false)
+      expect(playerStore.player!.gold).toBeGreaterThan(goldBefore)
+    })
+
+    it('refuses to sell equipped gear and to sell with no trader present', () => {
+      const gameStore = startGame()
+      gameStore.enterRoom('abandoned-forge')
+      gameStore.handleCommand('sell battle axe')
+      expect(gameStore.gameLog[gameStore.gameLog.length - 1]!.text).toContain('Unequip it first')
+
+      gameStore.enterRoom('first-hall')
+      useCombatStore().inCombat = false
+      gameStore.handleCommand('sell healing potion')
+      expect(gameStore.gameLog[gameStore.gameLog.length - 1]!.text).toContain('no one here to sell to')
+    })
+  })
+
+  describe('Rivendell region', () => {
+    it('starts a fresh journey in the courtyard with the main quest', async () => {
+      const { useQuestStore } = await import('../stores/questStore')
+      const gameStore = startGame('rivendell')
+      expect(gameStore.currentRoomId).toBe('rivendell-courtyard')
+      expect(gameStore.currentRegionId).toBe('rivendell')
+      expect(useQuestStore().questProgress['road-to-moria']).toBeDefined()
+      expect(gameStore.gameLog.map(l => l.text).join('\n')).toContain('Rivendell is now a waypoint')
+    })
+
+    it('Elrond gives counsel, a reward, and advances the main quest', async () => {
+      const { useQuestStore } = await import('../stores/questStore')
+      const gameStore = startGame('rivendell')
+      const playerStore = usePlayerStore()
+
+      gameStore.enterRoom('last-homely-house')
+      gameStore.handleCommand('talk elrond')
+
+      expect(useQuestStore().questProgress['road-to-moria']!.stageIndex).toBe(1)
+      expect(playerStore.inventory.some(i => i.id === 'miruvor')).toBe(true)
+    })
+
+    it('walking the road into Moria completes the prologue and starts the crossing', async () => {
+      const { useQuestStore } = await import('../stores/questStore')
+      const gameStore = startGame('rivendell')
+      const questStore = useQuestStore()
+
+      gameStore.enterRoom('last-homely-house')
+      gameStore.handleCommand('talk elrond')
+      gameStore.enterRoom('moria-west-approach')
+      expect(questStore.questProgress['road-to-moria']!.stageIndex).toBe(2)
+      expect(gameStore.gameLog.map(l => l.text).join('\n')).toContain('You have reached the Walls of Moria')
+
+      const logCount = gameStore.gameLog.length
+      gameStore.handleCommand('east')
+      expect(gameStore.currentRoomId).toBe('gates-of-moria')
+      expect(gameStore.currentRegionId).toBe('moria')
+      const newLogs = gameStore.gameLog.slice(logCount).map(l => l.text).join('\n')
+      expect(newLogs).toContain('— The Mines of Moria —')
+      expect(questStore.questProgress['road-to-moria']!.completed).toBe(true)
+      expect(questStore.questProgress['crossing-of-moria']).toBeDefined()
+    })
+
+    it('Erestor\'s fetch quest completes on returning the records', async () => {
+      const { useQuestStore } = await import('../stores/questStore')
+      const gameStore = startGame('rivendell')
+      const questStore = useQuestStore()
+      const playerStore = usePlayerStore()
+
+      gameStore.enterRoom('elrond-library')
+      gameStore.handleCommand('talk erestor')
+      expect(questStore.questProgress['records-of-eregion']).toBeDefined()
+
+      gameStore.enterRoom('eregion-ruins') // goblin raiders attack
+      useCombatStore().combatEnemies.forEach(e => { e.hp = 0 })
+      useCombatStore().inCombat = false
+      gameStore.handleCommand('take records')
+      expect(questStore.questProgress['records-of-eregion']!.stageIndex).toBe(1)
+
+      const goldBefore = playerStore.player!.gold
+      gameStore.enterRoom('elrond-library')
+      gameStore.handleCommand('talk erestor')
+      expect(questStore.questProgress['records-of-eregion']!.completed).toBe(true)
+      expect(playerStore.player!.gold).toBe(goldBefore + 40)
+    })
+
+    it('the smith buys and sells in the forge', () => {
+      const gameStore = startGame('rivendell')
+      const playerStore = usePlayerStore()
+      gameStore.enterRoom('rivendell-forge')
+
+      gameStore.handleCommand('buy torch')
+      expect(playerStore.inventory.some(i => i.id === 'torch')).toBe(true)
+
+      playerStore.addItem({ id: 'wolf-pelt', name: 'Wolf Pelt', description: '', type: 'misc', value: 12 })
+      const goldBefore = playerStore.player!.gold
+      gameStore.handleCommand('sell wolf pelt')
+      expect(playerStore.player!.gold).toBe(goldBefore + 6)
+    })
+  })
+
+  describe('leveling perks', () => {
+    it('unlocks the level 3 class perk from quest XP', () => {
+      const gameStore = startGame()
+      const playerStore = usePlayerStore()
+      playerStore.player!.xp = 0
+      playerStore.player!.level = 2
+      playerStore.player!.xpToNext = 10
+
+      gameStore.pushLogs(playerStore.addXp(10))
+
+      expect(playerStore.player!.level).toBe(3)
+      expect(playerStore.player!.perks).toContain('stone-skin')
+      expect(gameStore.gameLog.map(l => l.text).join('\n')).toContain('Perk unlocked: Stone Skin')
+    })
+  })
 })

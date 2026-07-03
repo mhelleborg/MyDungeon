@@ -467,6 +467,7 @@ export const npcs: Record<string, NPC> = {
       { itemId: 'greater-healing-potion', cost: 40 },
       { itemId: 'torch', cost: 5 },
       { itemId: 'dwarf-shield', cost: 45 },
+      { itemId: 'miruvor', cost: 60 },
     ],
   },
 
@@ -503,6 +504,8 @@ export const npcs: Record<string, NPC> = {
     tradeOffers: [
       { itemId: 'longsword', cost: 20 },
       { itemId: 'chain-mail', cost: 35 },
+      { itemId: 'battle-axe', cost: 30 },
+      { itemId: 'plate-armor', cost: 80 },
       { itemId: 'healing-potion', cost: 15 },
       { itemId: 'torch', cost: 5 },
     ],

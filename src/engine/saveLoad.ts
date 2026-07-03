@@ -4,7 +4,10 @@ import { useGameStore } from '../stores/gameStore'
 import { usePlayerStore } from '../stores/playerStore'
 import { useCombatStore } from '../stores/combatStore'
 import { useStatsStore } from '../stores/statsStore'
+import { useQuestStore } from '../stores/questStore'
 import { allRoomNPCs } from '../data/world'
+import { unlockPerksAtLevel } from './perks'
+import type { Player } from '../types/character'
 import type { BossPhase } from './handlers/bossHandler'
 
 const MAX_LOG_ENTRIES = 200
@@ -62,7 +65,11 @@ export function serialize(): SaveData {
     activeDialogue: gameStore.activeDialogue ? JSON.parse(JSON.stringify(gameStore.activeDialogue)) : null,
     nimrodelFragments: [...gameStore.nimrodelFragments],
     firedRoomEvents: setToArray(gameStore.firedRoomEvents),
+    lastWaypointId: gameStore.lastWaypointId,
     choicesMade: { ...gameStore.choicesMade },
+
+    // questStore
+    questProgress: JSON.parse(JSON.stringify(useQuestStore().questProgress)),
     choiceConsequences: { ...gameStore.choiceConsequences },
     removedEnemies: { ...gameStore.removedEnemies },
     addedEnemies: JSON.parse(JSON.stringify(gameStore.addedEnemies)),
@@ -140,7 +147,11 @@ export function deserialize(data: SaveData): void {
   gameStore.activeDialogue = data.activeDialogue ?? null
   gameStore.nimrodelFragments = new Set(data.nimrodelFragments ?? [])
   gameStore.firedRoomEvents = new Set(data.firedRoomEvents ?? [])
+  gameStore.lastWaypointId = data.lastWaypointId ?? ''
   gameStore.choicesMade = data.choicesMade ?? {}
+
+  // questStore
+  useQuestStore().questProgress = data.questProgress ?? {}
   gameStore.choiceConsequences = data.choiceConsequences ?? {}
   gameStore.removedEnemies = data.removedEnemies ?? {}
   gameStore.addedEnemies = data.addedEnemies ?? {}
@@ -187,27 +198,40 @@ export function deserialize(data: SaveData): void {
 }
 
 /**
- * Migrate an older save to the current SAVE_VERSION.
- * Returns null when the save is too old (or too new) to migrate.
+ * Migrate an older save to the current SAVE_VERSION, one version step at
+ * a time. Returns null when the save is too old (or too new) to migrate.
  */
 export function migrateSave(data: Record<string, unknown>): SaveData | null {
-  if (data.version === SAVE_VERSION) return data as unknown as SaveData
-  if (data.version === 3) {
+  if (typeof data.version !== 'number' || data.version < 3 || data.version > SAVE_VERSION) return null
+  const migrated = { ...data }
+
+  if (migrated.version === 3) {
     // v3 → v4: acts became regions; once-only room events are now tracked
     const firedRoomEvents: string[] = []
-    if (Array.isArray(data.visitedRooms) && data.visitedRooms.includes('east-gate')) {
+    if (Array.isArray(migrated.visitedRooms) && migrated.visitedRooms.includes('east-gate')) {
       firedRoomEvents.push('moria-crossed')
     }
-    const migrated = {
-      ...data,
-      version: SAVE_VERSION,
-      currentRegionId: (data.currentAct as string) ?? 'moria',
-      firedRoomEvents,
-    }
-    delete (migrated as Record<string, unknown>).currentAct
-    return migrated as unknown as SaveData
+    migrated.currentRegionId = (migrated.currentAct as string) ?? 'moria'
+    migrated.firedRoomEvents = firedRoomEvents
+    delete migrated.currentAct
+    migrated.version = 4
   }
-  return null
+
+  if (migrated.version === 4) {
+    // v4 → v5: quests, class perks, and the last-waypoint refuge
+    migrated.questProgress = {}
+    migrated.lastWaypointId = migrated.currentRegionId === 'lothlorien' ? 'dimrill-dale' : 'gates-of-moria'
+    const player = migrated.player as Player | null
+    if (player) {
+      player.perks = player.perks ?? []
+      for (let lvl = 1; lvl <= player.level; lvl++) {
+        unlockPerksAtLevel(player, lvl)
+      }
+    }
+    migrated.version = 5
+  }
+
+  return migrated as unknown as SaveData
 }
 
 export function saveGame(): boolean {

@@ -84,12 +84,25 @@ export function parseCommand(input: string): ParsedCommand {
     return { type: 'rest', raw }
   }
 
+  // Fast travel
+  if (verb === 'travel' || verb === 'journey') {
+    return { type: 'travel', target: rest || undefined, raw }
+  }
+
   // NPC interaction
   if (verb === 'talk' || verb === 'speak') {
     return { type: 'talk', target: rest || undefined, raw }
   }
   if (verb === 'trade' || verb === 'buy' || verb === 'shop') {
     return { type: 'trade', target: rest || undefined, raw }
+  }
+  if (verb === 'sell') {
+    return { type: 'sell', target: rest || undefined, raw }
+  }
+
+  // Quest journal
+  if (verb === 'quests' || verb === 'quest' || verb === 'journal' || verb === 'j') {
+    return { type: 'quests', raw }
   }
 
   // Puzzles

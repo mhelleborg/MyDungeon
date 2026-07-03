@@ -7,6 +7,9 @@ import PlayerStats from '../components/PlayerStats.vue'
 import InventoryPanel from '../components/InventoryPanel.vue'
 import CombatLog from '../components/CombatLog.vue'
 import MiniMap from '../components/MiniMap.vue'
+import WorldMap from '../components/WorldMap.vue'
+import QuestJournal from '../components/QuestJournal.vue'
+import GameMenu from '../components/GameMenu.vue'
 import AchievementToast from '../components/AchievementToast.vue'
 import FloaterLayer from '../components/FloaterLayer.vue'
 import { useGameStore } from '../stores/gameStore'
@@ -93,7 +96,7 @@ const hpBarColor = computed(() => {
 })
 
 // Mobile sidebar tab
-type MobileTab = 'stats' | 'inv' | 'map' | null
+type MobileTab = 'stats' | 'inv' | 'quests' | 'map' | null
 const mobileTab = ref<MobileTab>(null)
 function toggleMobileTab(tab: MobileTab) {
   mobileTab.value = mobileTab.value === tab ? null : tab
@@ -146,6 +149,12 @@ watch(
             : 'border-moria-border text-moria-info'"
           :title="soundOn ? 'Sound On' : 'Sound Off'"
         >{{ soundOn ? 'SND' : 'MUTE' }}</button>
+        <button
+          @click="gameStore.menuOpen = true"
+          class="text-[10px] md:text-xs px-1.5 py-0.5 md:px-2 md:py-1 border border-moria-border text-moria-info rounded
+                 hover:text-moria-highlight hover:border-moria-highlight/50 transition-colors cursor-pointer"
+          title="Menu (Esc)"
+        >☰ MENU</button>
       </div>
     </header>
 
@@ -170,7 +179,13 @@ watch(
       <div class="hidden md:flex w-64 flex-col gap-3 p-3 border-l border-moria-border overflow-y-auto">
         <PlayerStats />
         <InventoryPanel />
+        <QuestJournal />
         <MiniMap />
+        <button
+          @click="gameStore.worldMapOpen = true"
+          class="w-full px-3 py-2 border border-moria-border rounded text-moria-highlight text-xs font-bold tracking-wider
+                 hover:border-moria-highlight hover:bg-moria-highlight/10 transition-colors cursor-pointer"
+        >🗺 WORLD MAP <span class="text-moria-info font-normal">(M)</span></button>
       </div>
     </div>
 
@@ -178,19 +193,27 @@ watch(
     <div class="md:hidden border-t border-moria-border shrink-0">
       <div class="flex">
         <button
-          v-for="tab in (['stats', 'inv', 'map'] as const)"
+          v-for="tab in (['stats', 'inv', 'quests', 'map'] as const)"
           :key="tab"
           @click="toggleMobileTab(tab)"
           class="flex-1 py-2 text-[11px] font-bold text-center transition-colors cursor-pointer"
           :class="mobileTab === tab
             ? 'bg-moria-highlight/20 text-moria-highlight border-b-2 border-moria-highlight'
             : 'text-moria-info hover:text-moria-text'"
-        >{{ tab === 'stats' ? 'STATS' : tab === 'inv' ? 'INV' : 'MAP' }}</button>
+        >{{ tab === 'stats' ? 'STATS' : tab === 'inv' ? 'INV' : tab === 'quests' ? 'QUESTS' : 'MAP' }}</button>
       </div>
       <div v-if="mobileTab" class="max-h-[40vh] overflow-y-auto p-2 bg-moria-panel/80 border-t border-moria-border/50">
         <PlayerStats v-if="mobileTab === 'stats'" />
         <InventoryPanel v-if="mobileTab === 'inv'" />
-        <MiniMap v-if="mobileTab === 'map'" />
+        <QuestJournal v-if="mobileTab === 'quests'" />
+        <template v-if="mobileTab === 'map'">
+          <MiniMap />
+          <button
+            @click="gameStore.worldMapOpen = true; mobileTab = null"
+            class="w-full mt-2 px-3 py-2 border border-moria-border rounded text-moria-highlight text-xs font-bold tracking-wider
+                   hover:border-moria-highlight transition-colors cursor-pointer"
+          >🗺 WORLD MAP</button>
+        </template>
       </div>
     </div>
 
@@ -211,6 +234,12 @@ watch(
 
     <AchievementToast />
     <FloaterLayer />
+
+    <!-- World map overlay -->
+    <WorldMap v-if="gameStore.worldMapOpen" />
+
+    <!-- Game menu overlay -->
+    <GameMenu v-if="gameStore.menuOpen" />
 
     <!-- Game Over overlay -->
     <div v-if="gameStore.phase === 'game-over'" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 overflow-y-auto p-4">

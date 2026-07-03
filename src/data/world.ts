@@ -15,15 +15,60 @@ import { lothlorienNPCs, lothlorienRoomNPCs } from './lothlorienNPCs'
 import { lothlorienChoices } from './lothlorienChoices'
 import { lothlorienPuzzles, lothlorienRoomPuzzles } from './lothlorienPuzzles'
 import { lothlorienEncounters } from './lothlorienEncounters'
+import { moriaQuests, lothlorienQuests } from './quests'
+import {
+  rivendellRooms,
+  rivendellEnemies,
+  rivendellItems,
+  rivendellNPCs,
+  rivendellRoomNPCs,
+  rivendellQuests,
+} from './rivendell'
 
 export const DEFAULT_REGION: RegionId = 'moria'
 
 export const world: Record<RegionId, Region> = {
+  rivendell: {
+    id: 'rivendell',
+    name: 'Rivendell & Eriador',
+    entryRoomId: 'rivendell-courtyard',
+    arrivalLogs: [
+      { text: '— Rivendell —', logType: 'system' },
+      { text: 'The hidden valley opens below you, loud with waterfalls and quiet with peace. You have reached Imladris, the Last Homely House east of the Sea.', logType: 'narrative' },
+    ],
+    startOption: { label: 'Rivendell (Prologue)', desc: 'Begin in the Last Homely House. Gear up, take counsel, and walk the wild road to Moria\'s West-gate.' },
+    mapPosition: { x: 300, y: 120 },
+    travelFlavor: [
+      'You take the old road through the Trollshaws, keeping to the daylight and the high ground.',
+      'The known paths of Eriador carry you swiftly, the Misty Mountains standing sentinel at your shoulder.',
+    ],
+    roadAmbush: [
+      { enemyId: 'wild-wolf', count: 2 },
+    ],
+    rooms: rivendellRooms,
+    enemies: rivendellEnemies,
+    items: rivendellItems,
+    npcs: rivendellNPCs,
+    roomNPCs: rivendellRoomNPCs,
+    quests: rivendellQuests,
+  },
   moria: {
     id: 'moria',
     name: 'The Mines of Moria',
     entryRoomId: STARTING_ROOM,
+    arrivalLogs: [
+      { text: '— The Mines of Moria —', logType: 'system' },
+      { text: 'The long dark of Khazad-dûm swallows the daylight behind you. Somewhere far below, something is aware that the doors have opened.', logType: 'narrative' },
+    ],
     startOption: { label: 'Mines of Moria (Act I)', desc: 'Begin at the West-gate. The full journey through the dark.' },
+    mapPosition: { x: 390, y: 300 },
+    travelFlavor: [
+      'You pass once more into the silence of Khazad-dûm, keeping to halls and stairways you have learned to trust.',
+      'Your footsteps echo in the great dark, but the ways are known to you now, and the shadows hold fewer surprises.',
+    ],
+    roadAmbush: [
+      { enemyId: 'goblin', count: 2 },
+    ],
     rooms: moriaRooms,
     enemies: moriaEnemies,
     items: moriaItems,
@@ -34,6 +79,7 @@ export const world: Record<RegionId, Region> = {
     roomPuzzles: moriaRoomPuzzles,
     encounters: moriaEncounters,
     roomInteractions: moriaRoomInteractions,
+    quests: moriaQuests,
   },
   lothlorien: {
     id: 'lothlorien',
@@ -44,6 +90,14 @@ export const world: Record<RegionId, Region> = {
       { text: 'You leave the darkness of Moria behind. The world opens before you in golden light.', logType: 'narrative' },
     ],
     startOption: { label: 'Lothlórien (Act II)', desc: 'Skip Moria. Start in Dimrill Dale, level-boosted with Moria\'s spoils.' },
+    mapPosition: { x: 585, y: 390 },
+    travelFlavor: [
+      'You follow the Silverlode beneath the golden eaves, along elven paths that open before those who have walked them.',
+      'Mallorn leaves drift down around you as you travel the known roads of the Golden Wood.',
+    ],
+    roadAmbush: [
+      { enemyId: 'orc-scout', count: 2 },
+    ],
     rooms: lothlorienRooms,
     enemies: lothlorienEnemies,
     items: lothlorienItems,
@@ -54,6 +108,7 @@ export const world: Record<RegionId, Region> = {
     roomPuzzles: lothlorienRoomPuzzles,
     encounters: lothlorienEncounters,
     roomInteractions: lothlorienRoomInteractions,
+    quests: lothlorienQuests,
   },
 }
 
@@ -100,4 +155,5 @@ export const allChoices = mergeRecords(r => r.choices)
 export const allPuzzles = mergeRecords(r => r.puzzles)
 export const allRoomPuzzles = mergeRecords(r => r.roomPuzzles)
 export const allRoomInteractions = mergeRecords(r => r.roomInteractions)
+export const allQuests = mergeRecords(r => r.quests)
 export const encounterPool = Object.values(world).flatMap(r => r.encounters ?? [])

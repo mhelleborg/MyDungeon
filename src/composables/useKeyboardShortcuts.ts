@@ -13,7 +13,30 @@ export function useKeyboardShortcuts() {
 
   function handleKeydown(e: KeyboardEvent) {
     if (gameStore.phase !== 'playing') return
+
+    // Escape works even while typing: close overlays, else open the menu
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      if (gameStore.menuOpen) { gameStore.menuOpen = false; return }
+      if (gameStore.worldMapOpen) { gameStore.worldMapOpen = false; return }
+      if (isInputFocused()) (document.activeElement as HTMLElement).blur()
+      gameStore.menuOpen = true
+      return
+    }
+
     if (isInputFocused()) return
+
+    // While the game menu is open, other shortcuts are disabled
+    if (gameStore.menuOpen) return
+
+    // While the world map is open, only allow closing it
+    if (gameStore.worldMapOpen) {
+      if (e.key.toLowerCase() === 'm') {
+        e.preventDefault()
+        gameStore.worldMapOpen = false
+      }
+      return
+    }
 
     // Focus command input
     if (e.key === '/') {
@@ -45,6 +68,7 @@ export function useKeyboardShortcuts() {
     if (key === 'l') { gameStore.handleCommand('look'); return }
     if (key === 'i') { gameStore.handleCommand('inventory'); return }
     if (key === 'h') { gameStore.handleCommand('help'); return }
+    if (key === 'm') { gameStore.worldMapOpen = true; return }
 
     // Combat shortcuts
     if (combatStore.inCombat) {

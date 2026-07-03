@@ -11,8 +11,9 @@ import type { BossPhase } from '../engine/handlers/bossHandler'
 import type { ActiveEncounter } from './encounter'
 import type { ActiveChoice } from './choice'
 import type { ActiveDialogue } from './dialogue'
+import type { QuestProgress } from './quest'
 
-export const SAVE_VERSION = 4
+export const SAVE_VERSION = 5
 export const SAVE_KEY = 'moria-save'
 
 export interface SaveData {
@@ -53,7 +54,11 @@ export interface SaveData {
   activeDialogue: ActiveDialogue | null
   nimrodelFragments: string[]
   firedRoomEvents: string[]
+  lastWaypointId: string
   choicesMade: Record<string, string>
+
+  // questStore
+  questProgress: Record<string, QuestProgress>
   choiceConsequences: Record<string, boolean>
   removedEnemies: Record<string, number>
   addedEnemies: Record<string, { enemyId: string; count: number }[]>
