@@ -24,6 +24,14 @@ import {
   rivendellRoomNPCs,
   rivendellQuests,
 } from './rivendell'
+import {
+  fangornRooms,
+  fangornEnemies,
+  fangornItems,
+  fangornNPCs,
+  fangornRoomNPCs,
+  fangornQuests,
+} from './fangorn'
 
 export const DEFAULT_REGION: RegionId = 'moria'
 
@@ -109,6 +117,29 @@ export const world: Record<RegionId, Region> = {
     encounters: lothlorienEncounters,
     roomInteractions: lothlorienRoomInteractions,
     quests: lothlorienQuests,
+  },
+  fangorn: {
+    id: 'fangorn',
+    name: 'Fangorn Forest',
+    entryRoomId: 'fangorn-eaves',
+    arrivalLogs: [
+      { text: '— Fangorn Forest —', logType: 'system' },
+      { text: 'The oldest forest of Middle-earth closes over you, dim and watchful. The trees here remember axes — tread softly, and cut no living wood.', logType: 'narrative' },
+    ],
+    mapPosition: { x: 500, y: 520 },
+    travelFlavor: [
+      'You keep to the mossy aisles beneath the huorn-dark trees, walking softly, and the forest — grudgingly — lets you pass.',
+      'The great root-roads of Fangorn carry you on your way, and unseen boughs creak overhead like a slow conversation about you.',
+    ],
+    roadAmbush: [
+      { enemyId: 'orc-fugitive', count: 2 },
+    ],
+    rooms: fangornRooms,
+    enemies: fangornEnemies,
+    items: fangornItems,
+    npcs: fangornNPCs,
+    roomNPCs: fangornRoomNPCs,
+    quests: fangornQuests,
   },
 }
 
