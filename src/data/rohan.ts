@@ -155,9 +155,9 @@ export const rohanRooms: Record<string, Room> = {
       { direction: 'west', targetRoomId: 'westemnet-plains' },
     ],
     enemies: [
-      { enemyId: 'uruk-scout', count: 2 },
+      { enemyId: 'uruk-outrider', count: 2 },
     ],
-    items: ['white-hand-orders'],
+    items: ['white-hand-dispatches'],
     gridX: 2,
     gridY: 3,
   },
@@ -338,9 +338,9 @@ export const rohanEnemies: Record<string, Enemy> = {
     xpReward: 120,
     lootTable: ['gold-coins'],
   },
-  'uruk-scout': {
-    id: 'uruk-scout',
-    name: 'Uruk Scout',
+  'uruk-outrider': {
+    id: 'uruk-outrider',
+    name: 'Uruk Outrider',
     description: 'A great orc-soldier of Isengard, man-high and heavy-boned, in black mail with a white hand painted on the shield. It does not cringe from the daylight as lesser orcs do. It marches in it.',
     hp: 38,
     maxHp: 38,
@@ -420,8 +420,8 @@ export const rohanItems: Record<string, Item> = {
     type: 'misc',
     value: 25,
   },
-  'white-hand-orders': {
-    id: 'white-hand-orders',
+  'white-hand-dispatches': {
+    id: 'white-hand-dispatches',
     name: 'Orders of the White Hand',
     description: 'A packet of orders in a crabbed black script, sealed with a white hand pressed in wax, taken from an uruk scout. What little you can read is enough: numbers, musters, and the names of lands far north of Rohan. Isengard\'s war is wider than the Mark.',
     type: 'quest',
