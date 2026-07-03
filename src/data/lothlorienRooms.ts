@@ -34,6 +34,7 @@ export const lothlorienRooms: Record<string, Room> = {
     exits: [
       { direction: 'north', targetRoomId: 'dimrill-dale' },
       { direction: 'south', targetRoomId: 'nimrodel-stream' },
+      { direction: 'east', targetRoomId: 'anduin-crossing' },
     ],
     gridX: 4,
     gridY: 1,
@@ -330,6 +331,7 @@ export const lothlorienRooms: Record<string, Room> = {
     ],
     exits: [
       { direction: 'north', targetRoomId: 'celeborn-hall' },
+      { direction: 'south', targetRoomId: 'fangorn-eaves' },
     ],
     waypoint: true,
     waypointLabel: 'The Farewell Lawn',

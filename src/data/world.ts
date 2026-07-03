@@ -24,6 +24,30 @@ import {
   rivendellRoomNPCs,
   rivendellQuests,
 } from './rivendell'
+import {
+  fangornRooms,
+  fangornEnemies,
+  fangornItems,
+  fangornNPCs,
+  fangornRoomNPCs,
+  fangornQuests,
+} from './fangorn'
+import {
+  rohanRooms,
+  rohanEnemies,
+  rohanItems,
+  rohanNPCs,
+  rohanRoomNPCs,
+  rohanQuests,
+} from './rohan'
+import {
+  mirkwoodRooms,
+  mirkwoodEnemies,
+  mirkwoodItems,
+  mirkwoodNPCs,
+  mirkwoodRoomNPCs,
+  mirkwoodQuests,
+} from './mirkwood'
 
 export const DEFAULT_REGION: RegionId = 'moria'
 
@@ -109,6 +133,75 @@ export const world: Record<RegionId, Region> = {
     encounters: lothlorienEncounters,
     roomInteractions: lothlorienRoomInteractions,
     quests: lothlorienQuests,
+  },
+  fangorn: {
+    id: 'fangorn',
+    name: 'Fangorn Forest',
+    entryRoomId: 'fangorn-eaves',
+    arrivalLogs: [
+      { text: '— Fangorn Forest —', logType: 'system' },
+      { text: 'The oldest forest of Middle-earth closes over you, dim and watchful. The trees here remember axes — tread softly, and cut no living wood.', logType: 'narrative' },
+    ],
+    mapPosition: { x: 500, y: 520 },
+    travelFlavor: [
+      'You keep to the mossy aisles beneath the huorn-dark trees, walking softly, and the forest — grudgingly — lets you pass.',
+      'The great root-roads of Fangorn carry you on your way, and unseen boughs creak overhead like a slow conversation about you.',
+    ],
+    roadAmbush: [
+      { enemyId: 'orc-fugitive', count: 2 },
+    ],
+    rooms: fangornRooms,
+    enemies: fangornEnemies,
+    items: fangornItems,
+    npcs: fangornNPCs,
+    roomNPCs: fangornRoomNPCs,
+    quests: fangornQuests,
+  },
+  rohan: {
+    id: 'rohan',
+    name: 'Rohan & Edoras',
+    entryRoomId: 'wold-road',
+    arrivalLogs: [
+      { text: '— Rohan, the Riddermark —', logType: 'system' },
+      { text: 'The land of the Horse-lords opens before you, grass to the horizon under an enormous sky. Far south, beneath the White Mountains, a roof of gold catches the sun.', logType: 'narrative' },
+    ],
+    mapPosition: { x: 380, y: 590 },
+    travelFlavor: [
+      'You ride the green leagues of the Riddermark, keeping to the beaten road and the open ground where nothing can come at you unseen.',
+      'The wind of the Mark is at your back, and the grass bows in long waves before you as you go.',
+    ],
+    roadAmbush: [
+      { enemyId: 'warg-rider', count: 1 },
+    ],
+    rooms: rohanRooms,
+    enemies: rohanEnemies,
+    items: rohanItems,
+    npcs: rohanNPCs,
+    roomNPCs: rohanRoomNPCs,
+    quests: rohanQuests,
+  },
+  mirkwood: {
+    id: 'mirkwood',
+    name: 'Mirkwood',
+    entryRoomId: 'anduin-crossing',
+    arrivalLogs: [
+      { text: '— Mirkwood —', logType: 'system' },
+      { text: 'The Great River lies behind you, and before you the eaves of Mirkwood rise like a wall of standing night. The trees lean close, and listen. Keep to the path.', logType: 'narrative' },
+    ],
+    mapPosition: { x: 760, y: 150 },
+    travelFlavor: [
+      'You keep to the elf-path beneath the black boughs, and do not stray, and do not drink of the stream.',
+      'The darkness of the forest presses close on either hand, but the old road holds true beneath your feet.',
+    ],
+    roadAmbush: [
+      { enemyId: 'spider-lurker', count: 2 },
+    ],
+    rooms: mirkwoodRooms,
+    enemies: mirkwoodEnemies,
+    items: mirkwoodItems,
+    npcs: mirkwoodNPCs,
+    roomNPCs: mirkwoodRoomNPCs,
+    quests: mirkwoodQuests,
   },
 }
 

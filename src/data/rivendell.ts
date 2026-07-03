@@ -490,6 +490,38 @@ export const rivendellQuests: Record<string, Quest> = {
     rewards: { xp: 150, gold: 40 },
   },
 
+  'the-long-road': {
+    id: 'the-long-road',
+    name: 'The Long Road',
+    description: 'From the Last Homely House to the Golden Hall of Edoras — the whole breadth of the wild, under mountains and through forests. Few have walked it end to end.',
+    regionId: 'rivendell',
+    giver: 'the maps of Imladris',
+    start: { type: 'enter-room', target: 'rivendell-courtyard' },
+    stages: [
+      {
+        objective: 'Cross the Misty Mountains through Moria',
+        trigger: { type: 'enter-room', target: 'east-gate' },
+        completionLog: 'One mountain range lies behind you. The Long Road runs on.',
+      },
+      {
+        objective: 'Reach Caras Galadhon in the Golden Wood',
+        trigger: { type: 'enter-room', target: 'caras-galadhon-gate' },
+        completionLog: 'The city of the Galadhrim glimmers above you. The Long Road runs on.',
+      },
+      {
+        objective: 'Pass under the eaves of Fangorn Forest',
+        trigger: { type: 'enter-room', target: 'fangorn-eaves' },
+        completionLog: 'The oldest forest has let you through. The Long Road runs on.',
+      },
+      {
+        objective: 'Come at last to the gates of Edoras',
+        trigger: { type: 'enter-room', target: 'edoras-gates' },
+        completionLog: 'The Golden Hall stands above you, and the road from Rivendell lies whole behind. Few living folk have walked its length — now you are one of them.',
+      },
+    ],
+    rewards: { xp: 500, gold: 100 },
+  },
+
   'hoard-of-the-trolls': {
     id: 'hoard-of-the-trolls',
     name: 'The Trolls\' Hoard',

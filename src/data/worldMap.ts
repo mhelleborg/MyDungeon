@@ -15,9 +15,6 @@ export interface FutureRegion {
 }
 
 export const futureRegions: FutureRegion[] = [
-  { id: 'mirkwood', name: 'Mirkwood', mapPosition: { x: 760, y: 150 }, hint: 'A forest dark and full of whispers' },
-  { id: 'fangorn', name: 'Fangorn Forest', mapPosition: { x: 500, y: 520 }, hint: 'The oldest trees remember older days' },
-  { id: 'edoras', name: 'Edoras', mapPosition: { x: 380, y: 590 }, hint: 'The golden hall of the horse-lords' },
   { id: 'isengard', name: 'Isengard', mapPosition: { x: 240, y: 500 }, hint: 'A tower of black stone, and a wizard within' },
 ]
 
@@ -31,8 +28,8 @@ export interface MapRoute {
 export const mapRoutes: MapRoute[] = [
   { from: 'rivendell', to: 'moria' },
   { from: 'moria', to: 'lothlorien' },
-  { from: 'lothlorien', to: 'mirkwood', future: true },
-  { from: 'lothlorien', to: 'fangorn', future: true },
-  { from: 'fangorn', to: 'edoras', future: true },
+  { from: 'lothlorien', to: 'mirkwood' },
+  { from: 'lothlorien', to: 'fangorn' },
+  { from: 'fangorn', to: 'rohan' },
   { from: 'isengard', to: 'fangorn', future: true },
 ]
