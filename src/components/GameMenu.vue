@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useGameStore } from '../stores/gameStore'
-import { saveGame, loadGame, hasSaveGame, getSaveTimestamp, deleteSave } from '../engine/saveLoad'
+import { saveGame, loadGame, hasSaveGame, deleteSave } from '../engine/saveLoad'
 import { isSoundEnabled, setSoundEnabled } from '../engine/audio'
 import type { DifficultyLevel } from '../types/difficulty'
+import SaveSlotList from './SaveSlotList.vue'
 
 const gameStore = useGameStore()
 
@@ -11,6 +12,8 @@ const feedback = ref('')
 const confirmingRestart = ref(false)
 const soundOn = ref(isSoundEnabled())
 const saveAvailable = ref(hasSaveGame())
+const slotView = ref<'save' | 'load' | null>(null)
+const slotList = ref<InstanceType<typeof SaveSlotList> | null>(null)
 
 const difficulties: { id: DifficultyLevel; label: string }[] = [
   { id: 'easy', label: 'Easy' },
@@ -18,34 +21,35 @@ const difficulties: { id: DifficultyLevel; label: string }[] = [
   { id: 'hard', label: 'Hard' },
 ]
 
-const saveTimestamp = computed(() => {
-  const ts = getSaveTimestamp()
-  return ts ? new Date(ts).toLocaleString() : null
-})
-
 function close() {
   gameStore.menuOpen = false
 }
 
-function doSave() {
-  if (saveGame()) {
-    saveAvailable.value = true
-    feedback.value = 'Game saved.'
-  } else {
-    feedback.value = 'Failed to save the game.'
-  }
+function openSlots(mode: 'save' | 'load') {
+  slotView.value = mode
+  feedback.value = ''
   confirmingRestart.value = false
 }
 
-function doLoad() {
-  if (loadGame()) {
-    feedback.value = 'Game loaded.'
-    gameStore.log('Game loaded.', 'system')
-    close()
+function onSlotSelected(slot: number) {
+  if (slotView.value === 'save') {
+    if (saveGame(slot)) {
+      saveAvailable.value = true
+      feedback.value = `Game saved to slot ${slot}.`
+      gameStore.log(`Game saved to slot ${slot}.`, 'system')
+      slotList.value?.refresh()
+    } else {
+      feedback.value = 'Failed to save the game.'
+    }
   } else {
-    feedback.value = 'No save found, or the save could not be read.'
+    if (loadGame(slot)) {
+      feedback.value = `Loaded slot ${slot}.`
+      gameStore.log(`Game loaded from slot ${slot}.`, 'system')
+      close()
+    } else {
+      feedback.value = 'That save could not be read.'
+    }
   }
-  confirmingRestart.value = false
 }
 
 function toggleSound() {
@@ -90,28 +94,38 @@ function restart() {
         >✕</button>
       </div>
 
-      <div class="p-4 flex flex-col gap-2">
+      <!-- Save/load slot sub-view -->
+      <div v-if="slotView" class="p-4 flex flex-col gap-2">
+        <div class="text-moria-info text-xs font-bold tracking-wider">
+          {{ slotView === 'save' ? 'SAVE TO WHICH SLOT?' : 'LOAD WHICH SAVE?' }}
+        </div>
+        <SaveSlotList ref="slotList" :mode="slotView" @select="onSlotSelected" />
+        <div v-if="feedback" class="text-moria-highlight text-xs text-center">{{ feedback }}</div>
+        <button
+          @click="slotView = null; feedback = ''"
+          class="w-full px-4 py-2.5 border border-moria-border text-moria-text text-sm rounded hover:border-moria-highlight/50 cursor-pointer tracking-wider"
+        >BACK</button>
+      </div>
+
+      <div v-else class="p-4 flex flex-col gap-2">
         <button
           @click="close"
           class="w-full px-4 py-2.5 bg-moria-highlight text-moria-bg font-bold text-sm rounded hover:bg-moria-highlight/80 cursor-pointer tracking-wider"
         >RESUME</button>
 
         <button
-          @click="doSave"
+          @click="openSlots('save')"
           class="w-full px-4 py-2.5 border border-moria-border text-moria-highlight text-sm rounded hover:border-moria-highlight hover:bg-moria-highlight/10 cursor-pointer tracking-wider"
         >SAVE GAME</button>
 
         <button
-          @click="doLoad"
+          @click="openSlots('load')"
           :disabled="!saveAvailable"
           class="w-full px-4 py-2.5 border text-sm rounded tracking-wider"
           :class="saveAvailable
             ? 'border-moria-border text-moria-highlight hover:border-moria-highlight hover:bg-moria-highlight/10 cursor-pointer'
             : 'border-moria-border/50 text-moria-info opacity-50 cursor-default'"
-        >LOAD LAST SAVE</button>
-        <div v-if="saveTimestamp" class="text-moria-info text-[11px] -mt-1 text-center">
-          Last save: {{ saveTimestamp }}
-        </div>
+        >LOAD GAME</button>
 
         <!-- Settings -->
         <div class="border-t border-moria-border/50 mt-2 pt-3">

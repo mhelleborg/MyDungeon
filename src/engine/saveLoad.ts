@@ -1,11 +1,11 @@
-import type { SaveData } from '../types/save'
-import { SAVE_VERSION, SAVE_KEY } from '../types/save'
+import type { SaveData, SaveMetadata } from '../types/save'
+import { SAVE_VERSION, LEGACY_SAVE_KEY, ACTIVE_SLOT_KEY, SAVE_SLOT_COUNT, saveSlotKey } from '../types/save'
 import { useGameStore } from '../stores/gameStore'
 import { usePlayerStore } from '../stores/playerStore'
 import { useCombatStore } from '../stores/combatStore'
 import { useStatsStore } from '../stores/statsStore'
 import { useQuestStore } from '../stores/questStore'
-import { allRoomNPCs } from '../data/world'
+import { allRoomNPCs, getRegion, findRoom } from '../data/world'
 import { unlockPerksAtLevel } from './perks'
 import type { Player } from '../types/character'
 import type { BossPhase } from './handlers/bossHandler'
@@ -234,50 +234,158 @@ export function migrateSave(data: Record<string, unknown>): SaveData | null {
   return migrated as unknown as SaveData
 }
 
-export function saveGame(): boolean {
+/**
+ * Move a pre-slot save (single `moria-save` key) into the first empty slot.
+ * The legacy key is only removed once the copy has landed, so a failure
+ * here can never lose the save.
+ */
+function migrateLegacySave(): void {
   try {
+    const raw = localStorage.getItem(LEGACY_SAVE_KEY)
+    if (!raw) return
+    for (let slot = 1; slot <= SAVE_SLOT_COUNT; slot++) {
+      if (!localStorage.getItem(saveSlotKey(slot))) {
+        localStorage.setItem(saveSlotKey(slot), raw)
+        if (!localStorage.getItem(ACTIVE_SLOT_KEY)) setActiveSlot(slot)
+        localStorage.removeItem(LEGACY_SAVE_KEY)
+        return
+      }
+    }
+  } catch {
+    // Leave the legacy save in place for a later attempt
+  }
+}
+
+function isValidSlot(slot: number): boolean {
+  return Number.isInteger(slot) && slot >= 1 && slot <= SAVE_SLOT_COUNT
+}
+
+/** The slot the running game reads and (auto-)saves to */
+export function getActiveSlot(): number {
+  try {
+    const slot = Number(localStorage.getItem(ACTIVE_SLOT_KEY))
+    return isValidSlot(slot) ? slot : 1
+  } catch {
+    return 1
+  }
+}
+
+export function setActiveSlot(slot: number): void {
+  if (!isValidSlot(slot)) return
+  try {
+    localStorage.setItem(ACTIVE_SLOT_KEY, String(slot))
+  } catch {
+    // Non-fatal: the game falls back to slot 1
+  }
+}
+
+function readSlot(slot: number): string | null {
+  migrateLegacySave()
+  if (!isValidSlot(slot)) return null
+  return localStorage.getItem(saveSlotKey(slot))
+}
+
+export function saveGame(slot: number = getActiveSlot()): boolean {
+  if (!isValidSlot(slot)) return false
+  try {
+    migrateLegacySave()
     const data = serialize()
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data))
+    localStorage.setItem(saveSlotKey(slot), JSON.stringify(data))
+    setActiveSlot(slot)
     return true
   } catch {
     return false
   }
 }
 
-export function loadGame(): boolean {
+export function loadGame(slot: number = getActiveSlot()): boolean {
   try {
-    const raw = localStorage.getItem(SAVE_KEY)
+    const raw = readSlot(slot)
     if (!raw) return false
     const data = migrateSave(JSON.parse(raw))
     if (!data) return false
     deserialize(data)
+    setActiveSlot(slot)
     return true
   } catch {
     return false
   }
 }
 
-export function hasSaveGame(): boolean {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY)
-    if (!raw) return false
-    return migrateSave(JSON.parse(raw)) !== null
-  } catch {
-    return false
+/** With a slot: does that slot hold a loadable save? Without: does any? */
+export function hasSaveGame(slot?: number): boolean {
+  if (slot !== undefined) {
+    try {
+      const raw = readSlot(slot)
+      if (!raw) return false
+      return migrateSave(JSON.parse(raw)) !== null
+    } catch {
+      return false
+    }
   }
+  for (let s = 1; s <= SAVE_SLOT_COUNT; s++) {
+    if (hasSaveGame(s)) return true
+  }
+  return false
 }
 
-export function getSaveTimestamp(): number | null {
+/**
+ * Summarize the save in a slot for display: who the player is, where they
+ * are, and when it was saved. Returns null for empty or unreadable slots.
+ */
+export function getSaveMetadata(slot: number): SaveMetadata | null {
   try {
-    const raw = localStorage.getItem(SAVE_KEY)
+    const raw = readSlot(slot)
     if (!raw) return null
-    const data = JSON.parse(raw)
-    return data?.timestamp ?? null
+    const data = migrateSave(JSON.parse(raw))
+    if (!data) return null
+    const region = getRegion(data.currentRegionId)
+    const room = findRoom(data.currentRoomId)
+    return {
+      slot,
+      timestamp: data.timestamp ?? 0,
+      playerName: data.player?.name ?? 'Unknown adventurer',
+      playerClass: data.player?.class ?? null,
+      level: data.player?.level ?? 1,
+      hp: data.player?.hp ?? 0,
+      maxHp: data.player?.maxHp ?? 0,
+      regionName: region?.name ?? data.currentRegionId,
+      roomName: room?.name ?? data.currentRoomId,
+      difficulty: data.difficulty,
+      roomsExplored: data.statsStore?.roomsExplored ?? 0,
+      totalRooms: data.statsStore?.totalRooms ?? 0,
+    }
   } catch {
     return null
   }
 }
 
-export function deleteSave(): void {
-  localStorage.removeItem(SAVE_KEY)
+/** Metadata for every slot, index 0 = slot 1; null where empty/unreadable */
+export function listSaveSlots(): (SaveMetadata | null)[] {
+  return Array.from({ length: SAVE_SLOT_COUNT }, (_, i) => getSaveMetadata(i + 1))
+}
+
+/** The slot with the newest save, or null when there are no saves at all */
+export function getMostRecentSlot(): number | null {
+  let best: number | null = null
+  let bestTime = -1
+  for (const meta of listSaveSlots()) {
+    if (meta && meta.timestamp > bestTime) {
+      best = meta.slot
+      bestTime = meta.timestamp
+    }
+  }
+  return best
+}
+
+/** First empty slot, or null when all slots are occupied */
+export function firstEmptySlot(): number | null {
+  const slots = listSaveSlots()
+  const idx = slots.findIndex(meta => meta === null)
+  return idx === -1 ? null : idx + 1
+}
+
+export function deleteSave(slot: number = getActiveSlot()): void {
+  if (!isValidSlot(slot)) return
+  localStorage.removeItem(saveSlotKey(slot))
 }

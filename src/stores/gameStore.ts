@@ -1752,9 +1752,9 @@ export const useGameStore = defineStore('game', () => {
 
   // ── Save / Load ──────────────────────────────────────────
   function handleSave() {
-    import('../engine/saveLoad').then(({ saveGame }) => {
+    import('../engine/saveLoad').then(({ saveGame, getActiveSlot }) => {
       if (saveGame()) {
-        log('Game saved.', 'system')
+        log(`Game saved to slot ${getActiveSlot()}.`, 'system')
       } else {
         log('Failed to save game.', 'error')
       }
@@ -1762,9 +1762,9 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function handleLoad() {
-    import('../engine/saveLoad').then(({ loadGame }) => {
+    import('../engine/saveLoad').then(({ loadGame, getActiveSlot }) => {
       if (loadGame()) {
-        log('Game loaded.', 'system')
+        log(`Game loaded from slot ${getActiveSlot()}.`, 'system')
       } else {
         log('No save file found or save is corrupted.', 'error')
       }

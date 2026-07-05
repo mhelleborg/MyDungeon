@@ -3,7 +3,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useGameStore } from '../stores/gameStore'
 import { usePlayerStore } from '../stores/playerStore'
 import { useCombatStore } from '../stores/combatStore'
-import { SAVE_KEY } from '../types/save'
+import { saveSlotKey } from '../types/save'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -101,7 +101,7 @@ describe('open-world smoke test', () => {
 
     // Save is kept — the world stays open
     gameStore.handleCommand('look') // triggers auto-save path guard; save should still exist from earlier commands
-    expect(localStorageMock.getItem(SAVE_KEY)).not.toBeNull()
+    expect(localStorageMock.getItem(saveSlotKey(1))).not.toBeNull()
 
     // Continue exploring: re-entering must not re-trigger victory
     gameStore.phase = 'playing'
