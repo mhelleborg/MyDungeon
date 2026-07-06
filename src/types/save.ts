@@ -14,7 +14,31 @@ import type { ActiveDialogue } from './dialogue'
 import type { QuestProgress } from './quest'
 
 export const SAVE_VERSION = 5
-export const SAVE_KEY = 'moria-save'
+
+/** Pre-slot saves lived under this single key; they migrate into slot 1–3 */
+export const LEGACY_SAVE_KEY = 'moria-save'
+export const ACTIVE_SLOT_KEY = 'moria-save-active-slot'
+export const SAVE_SLOT_COUNT = 3
+
+export function saveSlotKey(slot: number): string {
+  return `moria-save-slot-${slot}`
+}
+
+/** Lightweight summary of a save, for slot pickers — derived from SaveData */
+export interface SaveMetadata {
+  slot: number
+  timestamp: number
+  playerName: string
+  playerClass: PlayerClass | null
+  level: number
+  hp: number
+  maxHp: number
+  regionName: string
+  roomName: string
+  difficulty: DifficultyLevel
+  roomsExplored: number
+  totalRooms: number
+}
 
 export interface SaveData {
   version: number

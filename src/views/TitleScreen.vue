@@ -1,26 +1,37 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useGameStore } from '../stores/gameStore'
-import { hasSaveGame, loadGame, getSaveTimestamp } from '../engine/saveLoad'
+import { loadGame, getMostRecentSlot, getSaveMetadata } from '../engine/saveLoad'
+import { playerClassNames } from '../types/character'
+import type { SaveMetadata } from '../types/save'
+import SaveSlotList from '../components/SaveSlotList.vue'
 
 const gameStore = useGameStore()
-const showContinue = ref(false)
-const saveTimestamp = ref<string | null>(null)
+const continueMeta = ref<SaveMetadata | null>(null)
+const showSlots = ref(false)
 const visible = ref(false)
 
 onMounted(() => {
-  showContinue.value = hasSaveGame()
-  if (showContinue.value) {
-    const ts = getSaveTimestamp()
-    if (ts) {
-      saveTimestamp.value = new Date(ts).toLocaleString()
-    }
+  const slot = getMostRecentSlot()
+  if (slot !== null) {
+    continueMeta.value = getSaveMetadata(slot)
   }
   setTimeout(() => { visible.value = true }, 100)
 })
 
+function continueSummary(meta: SaveMetadata): string {
+  const cls = meta.playerClass ? playerClassNames[meta.playerClass] : 'Adventurer'
+  return `${meta.playerName} — Level ${meta.level} ${cls} — ${meta.regionName}`
+}
+
 function continueGame() {
-  if (loadGame()) {
+  if (continueMeta.value && loadGame(continueMeta.value.slot)) {
+    gameStore.phase = 'playing'
+  }
+}
+
+function loadSlot(slot: number) {
+  if (loadGame(slot)) {
     gameStore.phase = 'playing'
   }
 }
@@ -194,27 +205,39 @@ function startGame() {
       <!-- Buttons -->
       <div class="fade-in-item flex flex-col items-center gap-3" style="--delay: 1.05s">
         <button
-          v-if="showContinue"
+          v-if="continueMeta"
           @click="continueGame"
           class="btn-continue w-full sm:w-auto px-10 py-3 bg-moria-highlight text-moria-bg font-bold text-base sm:text-lg rounded
                  cursor-pointer tracking-wider min-h-[48px]"
         >
           &#9876; CONTINUE
         </button>
-        <div v-if="showContinue && saveTimestamp" class="text-moria-border text-xs -mt-1 mb-1">
-          Last saved: {{ saveTimestamp }}
+        <div v-if="continueMeta" class="text-moria-border text-xs -mt-1 mb-1">
+          <div>{{ continueSummary(continueMeta) }}</div>
+          <div class="mt-0.5">Last saved: {{ new Date(continueMeta.timestamp).toLocaleString() }}</div>
         </div>
 
         <button
           @click="startGame"
           class="btn-enter w-full sm:w-auto px-10 py-3 font-bold text-base sm:text-lg rounded
                  cursor-pointer tracking-wider min-h-[48px]"
-          :class="showContinue
+          :class="continueMeta
             ? 'bg-transparent border border-moria-highlight/50 text-moria-highlight'
             : 'bg-moria-highlight text-moria-bg'"
         >
-          {{ showContinue ? 'NEW GAME' : '&#9876; ENTER MORIA' }}
+          {{ continueMeta ? 'NEW GAME' : '&#9876; ENTER MORIA' }}
         </button>
+
+        <button
+          v-if="continueMeta"
+          @click="showSlots = !showSlots"
+          class="text-moria-info text-sm underline decoration-moria-info/40 hover:text-moria-highlight cursor-pointer"
+        >
+          {{ showSlots ? 'Hide save slots' : 'Load game…' }}
+        </button>
+        <div v-if="showSlots" class="w-full max-w-sm text-left">
+          <SaveSlotList mode="load" @select="loadSlot" />
+        </div>
       </div>
 
       <!-- Footer -->

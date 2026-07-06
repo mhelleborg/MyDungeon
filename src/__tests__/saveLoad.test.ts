@@ -4,8 +4,22 @@ import { useGameStore } from '../stores/gameStore'
 import { usePlayerStore } from '../stores/playerStore'
 import { useCombatStore } from '../stores/combatStore'
 import { useStatsStore } from '../stores/statsStore'
-import { serialize, deserialize, hasSaveGame, deleteSave, saveGame, loadGame, migrateSave } from '../engine/saveLoad'
-import { SAVE_KEY, SAVE_VERSION } from '../types/save'
+import {
+  serialize,
+  deserialize,
+  hasSaveGame,
+  deleteSave,
+  saveGame,
+  loadGame,
+  migrateSave,
+  getSaveMetadata,
+  listSaveSlots,
+  getMostRecentSlot,
+  firstEmptySlot,
+  getActiveSlot,
+  setActiveSlot,
+} from '../engine/saveLoad'
+import { LEGACY_SAVE_KEY, SAVE_VERSION, saveSlotKey } from '../types/save'
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -159,7 +173,7 @@ describe('saveLoad', () => {
     })
 
     it('returns false for wrong version', () => {
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ version: 999 }))
+      localStorage.setItem(saveSlotKey(1), JSON.stringify({ version: 999 }))
       expect(hasSaveGame()).toBe(false)
     })
   })
@@ -244,7 +258,7 @@ describe('saveLoad', () => {
       gameStore.currentRoomId = 'dimrill-dale'
       const v3 = { ...serialize(), version: 3, currentAct: 'lothlorien' } as Record<string, unknown>
       delete v3.currentRegionId
-      localStorage.setItem(SAVE_KEY, JSON.stringify(v3))
+      localStorage.setItem(LEGACY_SAVE_KEY, JSON.stringify(v3))
 
       setActivePinia(createPinia())
       const gameStore2 = useGameStore()
@@ -276,6 +290,173 @@ describe('saveLoad', () => {
       // Should keep the last 200
       expect(data.gameLog[0]!.text).toBe('Log 100')
       expect(data.gameLog[199]!.text).toBe('Log 299')
+    })
+  })
+
+  describe('save slots', () => {
+    it('defaults to slot 1 as the active slot', () => {
+      expect(getActiveSlot()).toBe(1)
+    })
+
+    it('keeps saves in different slots independent', () => {
+      const gameStore = useGameStore()
+      gameStore.currentRoomId = 'gates-of-moria'
+      expect(saveGame(1)).toBe(true)
+
+      gameStore.currentRoomId = 'second-hall'
+      expect(saveGame(2)).toBe(true)
+
+      setActivePinia(createPinia())
+      expect(loadGame(1)).toBe(true)
+      expect(useGameStore().currentRoomId).toBe('gates-of-moria')
+
+      setActivePinia(createPinia())
+      expect(loadGame(2)).toBe(true)
+      expect(useGameStore().currentRoomId).toBe('second-hall')
+    })
+
+    it('tracks the active slot through save and load', () => {
+      saveGame(2)
+      expect(getActiveSlot()).toBe(2)
+
+      saveGame(3)
+      expect(getActiveSlot()).toBe(3)
+
+      loadGame(2)
+      expect(getActiveSlot()).toBe(2)
+    })
+
+    it('auto-saves land in the active slot', () => {
+      setActiveSlot(3)
+      expect(saveGame()).toBe(true)
+      expect(localStorage.getItem(saveSlotKey(3))).not.toBeNull()
+      expect(localStorage.getItem(saveSlotKey(1))).toBeNull()
+    })
+
+    it('rejects out-of-range slots', () => {
+      expect(saveGame(0)).toBe(false)
+      expect(saveGame(99)).toBe(false)
+      expect(loadGame(99)).toBe(false)
+      expect(hasSaveGame(99)).toBe(false)
+    })
+
+    it('deleteSave only clears the given slot', () => {
+      saveGame(1)
+      saveGame(2)
+      deleteSave(1)
+      expect(hasSaveGame(1)).toBe(false)
+      expect(hasSaveGame(2)).toBe(true)
+      expect(hasSaveGame()).toBe(true)
+    })
+
+    it('firstEmptySlot skips occupied slots', () => {
+      expect(firstEmptySlot()).toBe(1)
+      saveGame(1)
+      expect(firstEmptySlot()).toBe(2)
+      saveGame(2)
+      saveGame(3)
+      expect(firstEmptySlot()).toBeNull()
+    })
+
+    it('getMostRecentSlot picks the newest save', () => {
+      saveGame(1)
+      const raw = localStorage.getItem(saveSlotKey(1))!
+      const newer = { ...JSON.parse(raw), timestamp: Date.now() + 60_000 }
+      localStorage.setItem(saveSlotKey(3), JSON.stringify(newer))
+
+      expect(getMostRecentSlot()).toBe(3)
+    })
+
+    it('getMostRecentSlot returns null with no saves', () => {
+      expect(getMostRecentSlot()).toBeNull()
+    })
+  })
+
+  describe('legacy save migration', () => {
+    it('moves a pre-slot save into slot 1', () => {
+      const data = serialize()
+      localStorage.setItem(LEGACY_SAVE_KEY, JSON.stringify(data))
+
+      expect(hasSaveGame(1)).toBe(true)
+      expect(localStorage.getItem(LEGACY_SAVE_KEY)).toBeNull()
+      expect(getActiveSlot()).toBe(1)
+    })
+
+    it('moves a pre-slot save into the first empty slot when slot 1 is taken', () => {
+      saveGame(1)
+      const legacy = { ...serialize(), timestamp: 12345 }
+      localStorage.setItem(LEGACY_SAVE_KEY, JSON.stringify(legacy))
+
+      expect(hasSaveGame(2)).toBe(true)
+      expect(localStorage.getItem(LEGACY_SAVE_KEY)).toBeNull()
+      const meta = getSaveMetadata(2)
+      expect(meta!.timestamp).toBe(12345)
+    })
+
+    it('keeps the legacy save when all slots are full', () => {
+      saveGame(1)
+      saveGame(2)
+      saveGame(3)
+      localStorage.setItem(LEGACY_SAVE_KEY, JSON.stringify(serialize()))
+
+      expect(hasSaveGame()).toBe(true)
+      expect(localStorage.getItem(LEGACY_SAVE_KEY)).not.toBeNull()
+    })
+  })
+
+  describe('save metadata', () => {
+    it('returns null for empty slots', () => {
+      expect(getSaveMetadata(1)).toBeNull()
+    })
+
+    it('exposes player and location metadata for a save', () => {
+      const playerStore = usePlayerStore()
+      playerStore.initPlayer('Aragorn', 'ranger')
+      playerStore.player!.level = 4
+      const gameStore = useGameStore()
+      gameStore.currentRegionId = 'moria'
+      gameStore.currentRoomId = 'second-hall'
+      gameStore.difficulty = 'hard'
+      const statsStore = useStatsStore()
+      statsStore.roomsExplored = 7
+
+      saveGame(2)
+      const meta = getSaveMetadata(2)!
+
+      expect(meta.slot).toBe(2)
+      expect(meta.playerName).toBe('Aragorn')
+      expect(meta.playerClass).toBe('ranger')
+      expect(meta.level).toBe(4)
+      expect(meta.hp).toBe(playerStore.player!.hp)
+      expect(meta.maxHp).toBe(playerStore.player!.maxHp)
+      expect(meta.regionName).toBe('The Mines of Moria')
+      expect(meta.roomName).not.toBe('second-hall') // resolved to display name
+      expect(meta.roomName.length).toBeGreaterThan(0)
+      expect(meta.difficulty).toBe('hard')
+      expect(meta.roomsExplored).toBe(7)
+      expect(meta.timestamp).toBeGreaterThan(0)
+    })
+
+    it('derives metadata from migrated legacy saves', () => {
+      const playerStore = usePlayerStore()
+      playerStore.initPlayer('Gimli', 'dwarf-warrior')
+      const v3 = { ...serialize(), version: 3, currentAct: 'moria' } as Record<string, unknown>
+      delete v3.currentRegionId
+      localStorage.setItem(LEGACY_SAVE_KEY, JSON.stringify(v3))
+
+      const meta = getSaveMetadata(1)!
+      expect(meta.playerName).toBe('Gimli')
+      expect(meta.playerClass).toBe('dwarf-warrior')
+      expect(meta.regionName).toBe('The Mines of Moria')
+    })
+
+    it('listSaveSlots reports every slot in order', () => {
+      saveGame(2)
+      const slots = listSaveSlots()
+      expect(slots).toHaveLength(3)
+      expect(slots[0]).toBeNull()
+      expect(slots[1]).not.toBeNull()
+      expect(slots[2]).toBeNull()
     })
   })
 })

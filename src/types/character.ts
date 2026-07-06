@@ -9,6 +9,12 @@ export interface AbilityScores {
 
 export type PlayerClass = 'ranger' | 'wizard' | 'dwarf-warrior'
 
+export const playerClassNames: Record<PlayerClass, string> = {
+  ranger: 'Ranger',
+  wizard: 'Wizard',
+  'dwarf-warrior': 'Dwarf Warrior',
+}
+
 export interface Spell {
   id: string
   name: string

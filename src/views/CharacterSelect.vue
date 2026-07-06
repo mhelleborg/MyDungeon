@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { PlayerClass } from '../types/character'
+import { playerClassNames } from '../types/character'
 import type { DifficultyLevel } from '../types/difficulty'
 import { difficultySettings } from '../types/difficulty'
 import { useGameStore } from '../stores/gameStore'
 import { usePlayerStore } from '../stores/playerStore'
 import type { RegionId } from '../types/region'
 import { world, DEFAULT_REGION } from '../data/world'
+import { SAVE_SLOT_COUNT } from '../types/save'
+import { listSaveSlots, firstEmptySlot, setActiveSlot, saveGame } from '../engine/saveLoad'
 
 const gameStore = useGameStore()
 const playerStore = usePlayerStore()
@@ -15,6 +18,16 @@ const name = ref('')
 const selectedClass = ref<PlayerClass>('ranger')
 const selectedDifficulty = ref<DifficultyLevel>('normal')
 const selectedAct = ref<RegionId>(DEFAULT_REGION)
+
+const slotMetas = listSaveSlots()
+const selectedSlot = ref(firstEmptySlot() ?? 1)
+
+function slotSummary(slot: number): string {
+  const meta = slotMetas[slot - 1]
+  if (!meta) return 'Empty'
+  const cls = meta.playerClass ? playerClassNames[meta.playerClass] : 'Adventurer'
+  return `${meta.playerName} — Lv ${meta.level} ${cls}, ${meta.regionName}`
+}
 
 const acts: { id: RegionId; label: string; desc: string }[] = Object.values(world)
   .filter(region => region.startOption)
@@ -54,9 +67,11 @@ function startAdventure() {
   const playerName = name.value.trim() || 'Adventurer'
   gameStore.difficulty = selectedDifficulty.value
   const multipliers = difficultySettings[selectedDifficulty.value]
+  setActiveSlot(selectedSlot.value)
   playerStore.initPlayer(playerName, selectedClass.value, multipliers.extraPotions, selectedAct.value)
   gameStore.phase = 'playing'
   gameStore.initGame(selectedAct.value)
+  saveGame(selectedSlot.value)
 }
 </script>
 
@@ -133,6 +148,30 @@ function startAdventure() {
             <p class="text-moria-info text-xs mt-1">{{ diff.desc }}</p>
           </button>
         </div>
+      </div>
+
+      <!-- Save slot selection -->
+      <div class="mb-6 sm:mb-8">
+        <label class="text-moria-info text-xs block mb-2">SAVE SLOT</label>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <button
+            v-for="slot in SAVE_SLOT_COUNT"
+            :key="slot"
+            @click="selectedSlot = slot"
+            class="flex-1 p-2.5 sm:p-3 border rounded transition-colors cursor-pointer text-center"
+            :class="selectedSlot === slot
+              ? 'border-moria-highlight bg-moria-highlight/10'
+              : 'border-moria-border bg-moria-panel/30 hover:border-moria-border/80'"
+          >
+            <span class="text-moria-highlight font-bold text-sm">SLOT {{ slot }}</span>
+            <p class="text-xs mt-1" :class="slotMetas[slot - 1] ? 'text-moria-text' : 'text-moria-info italic'">
+              {{ slotSummary(slot) }}
+            </p>
+          </button>
+        </div>
+        <p v-if="slotMetas[selectedSlot - 1]" class="text-moria-danger text-xs mt-2 text-center">
+          Starting here will overwrite the save in slot {{ selectedSlot }}.
+        </p>
       </div>
 
       <button
