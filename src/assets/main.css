@@ -125,6 +125,26 @@ input, select, textarea {
   animation: blood-pulse 1.5s ease-in-out infinite;
 }
 
+/* Story feed: new entry fade-in */
+@keyframes feed-entry-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.feed-entry {
+  animation: feed-entry-in 0.25s ease-out;
+}
+
+/* Bottom sheet slide-up */
+@keyframes sheet-up {
+  from { transform: translateY(24px); opacity: 0.6; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-sheet-up {
+  animation: sheet-up 0.2s ease-out;
+}
+
 /* Mini-map: room discovery flash */
 @keyframes map-discover {
   0% { transform: scale(0.5); box-shadow: 0 0 12px var(--color-moria-highlight); }
@@ -147,7 +167,9 @@ input, select, textarea {
 
 @media (prefers-reduced-motion: reduce) {
   .animate-map-discover,
-  .animate-map-current-pulse {
+  .animate-map-current-pulse,
+  .feed-entry,
+  .animate-sheet-up {
     animation: none;
   }
 }

@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useGameStore } from '../stores/gameStore'
+
+const props = defineProps<{
+  /** Focus the input as soon as it mounts (desktop / opened-on-demand). */
+  autofocus?: boolean
+}>()
 
 const gameStore = useGameStore()
 const input = ref('')
@@ -36,6 +41,10 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
+onMounted(() => {
+  if (props.autofocus) inputEl.value?.focus()
+})
+
 defineExpose({ focus: () => inputEl.value?.focus() })
 </script>
 
@@ -50,8 +59,12 @@ defineExpose({ focus: () => inputEl.value?.focus() })
       type="text"
       placeholder="Enter command..."
       data-command-input
-      class="flex-1 bg-transparent text-moria-text font-mono text-sm md:text-sm outline-none placeholder-moria-border"
-      autofocus
+      autocapitalize="off"
+      autocorrect="off"
+      autocomplete="off"
+      spellcheck="false"
+      enterkeyhint="send"
+      class="flex-1 bg-transparent text-moria-text font-mono outline-none placeholder-moria-border"
     />
   </div>
 </template>
