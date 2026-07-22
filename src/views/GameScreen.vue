@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import RoomDescription from '../components/RoomDescription.vue'
-import ActionBar from '../components/ActionBar.vue'
-import DirectionControls from '../components/DirectionControls.vue'
+import StoryFeed from '../components/StoryFeed.vue'
+import RoomContextBar from '../components/RoomContextBar.vue'
+import ActionChips from '../components/ActionChips.vue'
+import CombatHud from '../components/CombatHud.vue'
 import CommandInput from '../components/CommandInput.vue'
+import BottomSheet from '../components/BottomSheet.vue'
 import PlayerStats from '../components/PlayerStats.vue'
 import InventoryPanel from '../components/InventoryPanel.vue'
-import CombatLog from '../components/CombatLog.vue'
 import MiniMap from '../components/MiniMap.vue'
 import WorldMap from '../components/WorldMap.vue'
 import QuestJournal from '../components/QuestJournal.vue'
@@ -20,12 +21,14 @@ import { formatElapsed } from '../engine/achievements'
 import { isSoundEnabled, setSoundEnabled } from '../engine/audio'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { useFloaters } from '../composables/useFloaters'
-import { computed, ref, watch } from 'vue'
+import { useQuestStore } from '../stores/questStore'
+import { computed, nextTick, ref, watch } from 'vue'
 
 const gameStore = useGameStore()
 const combatStore = useCombatStore()
 const playerStore = usePlayerStore()
 const statsStore = useStatsStore()
+const questStore = useQuestStore()
 
 useKeyboardShortcuts()
 
@@ -95,11 +98,30 @@ const hpBarColor = computed(() => {
   return 'bg-moria-danger'
 })
 
-// Mobile sidebar tab
-type MobileTab = 'stats' | 'inv' | 'quests' | 'map' | null
-const mobileTab = ref<MobileTab>(null)
-function toggleMobileTab(tab: MobileTab) {
-  mobileTab.value = mobileTab.value === tab ? null : tab
+// ── Bottom sheets (mobile) ─────────────────────────────────
+type SheetId = 'map' | 'hero' | 'pack' | 'quests'
+const activeSheet = ref<SheetId | null>(null)
+const sheetTitle: Record<SheetId, string> = {
+  map: 'MAP', hero: 'HERO', pack: 'PACK', quests: 'QUESTS',
+}
+function toggleSheet(id: SheetId) {
+  activeSheet.value = activeSheet.value === id ? null : id
+}
+
+const questCount = computed(() => questStore.activeQuests.length)
+
+// ── Command input ──────────────────────────────────────────
+// Always visible on desktop; opened on demand on mobile.
+const mobileInputOpen = ref(false)
+const mobileInput = ref<InstanceType<typeof CommandInput> | null>(null)
+const desktopInput = ref<InstanceType<typeof CommandInput> | null>(null)
+
+async function openCommandInput() {
+  activeSheet.value = null
+  mobileInputOpen.value = true
+  await nextTick()
+  mobileInput.value?.focus()
+  desktopInput.value?.focus()
 }
 
 // Floating numbers anchored to the header HP bar
@@ -123,27 +145,30 @@ watch(
 
 <template>
   <div class="h-[100dvh] flex flex-col bg-moria-bg" :class="screenEffect">
-    <!-- Header -->
-    <header class="flex items-center px-3 py-1.5 md:px-4 md:py-2 gap-2 border-b border-moria-border bg-moria-panel/50 shrink-0">
+    <!-- Header: identity + vitals + menu -->
+    <header class="flex items-center px-3 py-1.5 md:px-4 md:py-2 gap-2.5 border-b border-moria-border bg-moria-panel/50 shrink-0">
       <h1 class="text-sm md:text-lg font-bold text-moria-highlight tracking-wider whitespace-nowrap">MORIA</h1>
       <div v-if="playerStore.player" ref="playerHpAnchor" class="flex items-center gap-1.5 flex-1 min-w-0">
         <span class="text-moria-info text-[10px] md:text-xs">HP</span>
-        <div class="flex-1 max-w-32 h-2 bg-moria-bg rounded overflow-hidden">
+        <div class="flex-1 max-w-36 h-2.5 bg-moria-bg rounded overflow-hidden">
           <div :class="hpBarColor" class="h-full transition-all duration-300" :style="{ width: hpPercent + '%' }"></div>
         </div>
-        <span class="text-moria-text text-[10px] md:text-xs font-mono">{{ playerStore.player.hp }}/{{ playerStore.player.maxHp }}</span>
+        <span class="text-moria-text text-[11px] md:text-xs font-mono whitespace-nowrap">{{ playerStore.player.hp }}/{{ playerStore.player.maxHp }}</span>
+        <span class="hidden sm:inline text-moria-info text-[10px] md:text-xs whitespace-nowrap ml-1">
+          Lv {{ playerStore.player.level }} · <span class="text-amber-400">{{ playerStore.player.gold }}g</span>
+        </span>
       </div>
       <div v-if="playerStore.player" class="flex items-center gap-1.5 shrink-0">
         <a
           href="https://github.com/mhelleborg/MyDungeon/issues/new"
           target="_blank"
           rel="noopener"
-          class="hidden sm:inline-block text-[10px] md:text-xs px-1.5 py-0.5 md:px-2 md:py-1 border border-moria-border text-moria-info rounded hover:text-moria-highlight hover:border-moria-highlight/50 transition-colors"
+          class="hidden md:inline-block text-xs px-2 py-1 border border-moria-border text-moria-info rounded hover:text-moria-highlight hover:border-moria-highlight/50 transition-colors"
           title="Send feedback or ideas"
         >FEEDBACK</a>
         <button
           @click="toggleSound"
-          class="text-[10px] md:text-xs px-1.5 py-0.5 md:px-2 md:py-1 border rounded transition-colors cursor-pointer"
+          class="text-[10px] md:text-xs px-2 py-1.5 md:py-1 border rounded transition-colors cursor-pointer"
           :class="soundOn
             ? 'border-moria-highlight/50 text-moria-highlight'
             : 'border-moria-border text-moria-info'"
@@ -151,32 +176,67 @@ watch(
         >{{ soundOn ? 'SND' : 'MUTE' }}</button>
         <button
           @click="gameStore.menuOpen = true"
-          class="text-[10px] md:text-xs px-1.5 py-0.5 md:px-2 md:py-1 border border-moria-border text-moria-info rounded
+          class="text-[10px] md:text-xs px-2 py-1.5 md:py-1 border border-moria-border text-moria-info rounded
                  hover:text-moria-highlight hover:border-moria-highlight/50 transition-colors cursor-pointer"
           title="Menu (Esc)"
         >☰ MENU</button>
       </div>
     </header>
 
-    <!-- Main content -->
-    <div class="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
-      <!-- Left column: room + controls + log -->
-      <div class="flex-1 flex flex-col p-2 md:p-3 gap-1.5 md:gap-3 min-w-0 overflow-y-auto">
-        <RoomDescription />
+    <!-- Where am I + exits -->
+    <RoomContextBar />
 
-        <!-- Encounter hint -->
-        <div v-if="gameStore.activeEncounter" class="px-2 py-1.5 md:px-3 md:py-2 text-xs md:text-sm border rounded border-moria-highlight/40 bg-moria-highlight/10 text-moria-highlight shrink-0">
-          <template v-if="gameStore.activeEncounter.type === 'riddle'">A riddle awaits... (type "say &lt;answer&gt;")</template>
-          <template v-else-if="gameStore.activeEncounter.type === 'merchant'">A merchant is nearby... (type "trade")</template>
+    <!-- Main content -->
+    <div class="flex-1 flex overflow-hidden min-h-0">
+      <!-- Center column: the story + the dock -->
+      <div class="flex-1 flex flex-col min-w-0 min-h-0">
+        <StoryFeed />
+
+        <!-- Action dock -->
+        <div class="shrink-0 border-t border-moria-border bg-moria-panel/60 px-2 pt-2 md:px-3 space-y-2
+                    pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-3">
+          <CombatHud />
+          <div class="max-h-[30vh] overflow-y-auto">
+            <ActionChips @request-input="openCommandInput" />
+          </div>
+
+          <!-- Command input: on-demand on mobile, persistent on desktop -->
+          <div v-if="mobileInputOpen" class="md:hidden flex items-center gap-1.5">
+            <CommandInput ref="mobileInput" class="flex-1" />
+            <button
+              @click="mobileInputOpen = false"
+              class="min-w-[44px] min-h-[44px] rounded border border-moria-border text-moria-info cursor-pointer"
+              aria-label="Hide command input"
+            >✕</button>
+          </div>
+          <div class="hidden md:block">
+            <CommandInput ref="desktopInput" autofocus />
+          </div>
         </div>
 
-        <ActionBar />
-        <DirectionControls />
-        <CombatLog />
+        <!-- Mobile nav -->
+        <nav class="md:hidden flex border-t border-moria-border bg-moria-panel/80 shrink-0
+                    pb-[env(safe-area-inset-bottom)]">
+          <button
+            v-for="id in (['map', 'hero', 'pack', 'quests'] as const)"
+            :key="id"
+            @click="toggleSheet(id)"
+            class="flex-1 min-h-[48px] text-[11px] font-bold tracking-wider text-center transition-colors cursor-pointer"
+            :class="activeSheet === id ? 'text-moria-highlight bg-moria-highlight/10' : 'text-moria-info'"
+          >
+            {{ sheetTitle[id] }}<span v-if="id === 'quests' && questCount > 0" class="text-moria-highlight ml-0.5">•</span>
+          </button>
+          <button
+            @click="mobileInputOpen ? mobileInputOpen = false : openCommandInput()"
+            class="flex-1 min-h-[48px] text-sm font-bold text-center transition-colors cursor-pointer"
+            :class="mobileInputOpen ? 'text-moria-highlight bg-moria-highlight/10' : 'text-moria-info'"
+            aria-label="Toggle command input"
+          >⌨</button>
+        </nav>
       </div>
 
       <!-- Desktop sidebar -->
-      <div class="hidden md:flex w-64 flex-col gap-3 p-3 border-l border-moria-border overflow-y-auto">
+      <aside class="hidden md:flex w-72 flex-col gap-3 p-3 border-l border-moria-border overflow-y-auto shrink-0">
         <PlayerStats />
         <InventoryPanel />
         <QuestJournal />
@@ -186,41 +246,23 @@ watch(
           class="w-full px-3 py-2 border border-moria-border rounded text-moria-highlight text-xs font-bold tracking-wider
                  hover:border-moria-highlight hover:bg-moria-highlight/10 transition-colors cursor-pointer"
         >🗺 WORLD MAP <span class="text-moria-info font-normal">(M)</span></button>
-      </div>
+      </aside>
     </div>
 
-    <!-- Mobile tab bar + drawer -->
-    <div class="md:hidden border-t border-moria-border shrink-0">
-      <div class="flex">
+    <!-- Mobile bottom sheets -->
+    <BottomSheet v-if="activeSheet" :title="sheetTitle[activeSheet]" @close="activeSheet = null">
+      <PlayerStats v-if="activeSheet === 'hero'" />
+      <InventoryPanel v-if="activeSheet === 'pack'" />
+      <QuestJournal v-if="activeSheet === 'quests'" />
+      <template v-if="activeSheet === 'map'">
+        <MiniMap />
         <button
-          v-for="tab in (['stats', 'inv', 'quests', 'map'] as const)"
-          :key="tab"
-          @click="toggleMobileTab(tab)"
-          class="flex-1 py-2 text-[11px] font-bold text-center transition-colors cursor-pointer"
-          :class="mobileTab === tab
-            ? 'bg-moria-highlight/20 text-moria-highlight border-b-2 border-moria-highlight'
-            : 'text-moria-info hover:text-moria-text'"
-        >{{ tab === 'stats' ? 'STATS' : tab === 'inv' ? 'INV' : tab === 'quests' ? 'QUESTS' : 'MAP' }}</button>
-      </div>
-      <div v-if="mobileTab" class="max-h-[40vh] overflow-y-auto p-2 bg-moria-panel/80 border-t border-moria-border/50">
-        <PlayerStats v-if="mobileTab === 'stats'" />
-        <InventoryPanel v-if="mobileTab === 'inv'" />
-        <QuestJournal v-if="mobileTab === 'quests'" />
-        <template v-if="mobileTab === 'map'">
-          <MiniMap />
-          <button
-            @click="gameStore.worldMapOpen = true; mobileTab = null"
-            class="w-full mt-2 px-3 py-2 border border-moria-border rounded text-moria-highlight text-xs font-bold tracking-wider
-                   hover:border-moria-highlight transition-colors cursor-pointer"
-          >🗺 WORLD MAP</button>
-        </template>
-      </div>
-    </div>
-
-    <!-- Command input (sticky at bottom) -->
-    <div class="p-1.5 md:px-3 md:pb-3 border-t border-moria-border shrink-0">
-      <CommandInput />
-    </div>
+          @click="gameStore.worldMapOpen = true; activeSheet = null"
+          class="w-full mt-2 px-3 py-2.5 min-h-[44px] border border-moria-border rounded text-moria-highlight text-xs font-bold tracking-wider
+                 hover:border-moria-highlight transition-colors cursor-pointer"
+        >🗺 WORLD MAP</button>
+      </template>
+    </BottomSheet>
 
     <!-- Low HP blood vignette -->
     <div
